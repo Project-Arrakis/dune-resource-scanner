@@ -100,3 +100,68 @@ func TestFilterByPathname_ReturnsMatchingRegions(t *testing.T) {
 		t.Fatalf("unexpected heap region start: %#x", heap[0].Start)
 	}
 }
+
+// HeapLikeRegions must cover both the classic glibc [heap] AND every
+// anonymous read-write mapping, because a game engine with its own
+// allocator (confirmed live against dune-dev: [heap] was ~3MB while the
+// actual game-object allocations live in dozens of large anonymous rw
+// mmap regions up to 4GB each) puts real actor data outside [heap] entirely.
+func TestHeapLikeRegions_IncludesNamedHeap(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	heapLike := HeapLikeRegions(regions)
+	found := false
+	for _, r := range heapLike {
+		if r.Pathname == "[heap]" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected [heap] region to be included")
+	}
+}
+
+func TestHeapLikeRegions_IncludesAnonymousRWRegions(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	heapLike := HeapLikeRegions(regions)
+	found := false
+	for _, r := range heapLike {
+		if r.Start == 0x7f0a30000000 {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected the anonymous rw region to be included")
+	}
+}
+
+func TestHeapLikeRegions_ExcludesFileBackedRegions(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	heapLike := HeapLikeRegions(regions)
+	for _, r := range heapLike {
+		if r.Pathname != "" && r.Pathname != "[heap]" {
+			t.Fatalf("expected no file-backed regions, found %+v", r)
+		}
+	}
+}
+
+func TestHeapLikeRegions_ExcludesReadOnlyRegions(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	heapLike := HeapLikeRegions(regions)
+	for _, r := range heapLike {
+		if len(r.Perms) < 2 || r.Perms[1] != 'w' {
+			t.Fatalf("expected only writable regions, found %+v", r)
+		}
+	}
+}

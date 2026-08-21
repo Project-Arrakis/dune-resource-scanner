@@ -71,9 +71,9 @@ func run(args []string, out io.Writer) error {
 	defer memFile.Close()
 
 	exeRegions := memscan.FilterExecutable(regions)
-	heapRegions := memscan.FilterByPathname(regions, "[heap]")
+	heapRegions := memscan.HeapLikeRegions(regions)
 	if len(heapRegions) == 0 {
-		return fmt.Errorf("no [heap] region found in %s", mapsPath)
+		return fmt.Errorf("no heap-like (anonymous writable) regions found in %s", mapsPath)
 	}
 
 	isExe := func(addr uint64) bool { return regionSetContains(exeRegions, addr) }

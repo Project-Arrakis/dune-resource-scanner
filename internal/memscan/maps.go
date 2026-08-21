@@ -83,3 +83,23 @@ func FilterByPathname(regions []Region, name string) []Region {
 	}
 	return out
 }
+
+// HeapLikeRegions returns every region that could hold heap-allocated
+// objects: the classic glibc [heap], plus every anonymous (no backing file)
+// writable mapping. Engines with their own allocator (confirmed live
+// against the Dune Awakening server: [heap] is only a few MB, while real
+// game-object allocations live in dozens of large anonymous rw mmap
+// regions) put real actor data outside [heap] entirely, so scanning
+// [heap] alone misses almost everything.
+func HeapLikeRegions(regions []Region) []Region {
+	var out []Region
+	for _, r := range regions {
+		if len(r.Perms) < 2 || r.Perms[1] != 'w' {
+			continue
+		}
+		if r.Pathname == "[heap]" || r.Pathname == "" {
+			out = append(out, r)
+		}
+	}
+	return out
+}
