@@ -96,3 +96,50 @@ func TestFindPointerReferences_IgnoresUnalignedCoincidence(t *testing.T) {
 		t.Fatalf("expected 0 aligned hits, got %d: %v", len(hits), hits)
 	}
 }
+
+func TestFindPointerReferencesMulti_FindsMatchForOneOfManyTargets(t *testing.T) {
+	targets := map[uint64]bool{0x1111: true, 0x2222: true, 0x3333: true}
+	buf := append(make([]byte, 8), le64(0x2222)...)
+
+	refs := FindPointerReferencesMulti(buf, 0x5000, targets)
+	if len(refs) != 1 {
+		t.Fatalf("expected 1 ref, got %d: %+v", len(refs), refs)
+	}
+	if refs[0].Addr != 0x5008 || refs[0].Target != 0x2222 {
+		t.Fatalf("unexpected ref: %+v", refs[0])
+	}
+}
+
+func TestFindPointerReferencesMulti_FindsMatchesForDifferentTargets(t *testing.T) {
+	targets := map[uint64]bool{0xAAAA: true, 0xBBBB: true}
+	buf := append(le64(0xAAAA), le64(0xBBBB)...)
+
+	refs := FindPointerReferencesMulti(buf, 0, targets)
+	if len(refs) != 2 {
+		t.Fatalf("expected 2 refs, got %d: %+v", len(refs), refs)
+	}
+	if refs[0].Addr != 0 || refs[0].Target != 0xAAAA {
+		t.Fatalf("unexpected first ref: %+v", refs[0])
+	}
+	if refs[1].Addr != 8 || refs[1].Target != 0xBBBB {
+		t.Fatalf("unexpected second ref: %+v", refs[1])
+	}
+}
+
+func TestFindPointerReferencesMulti_IgnoresUnalignedCoincidence(t *testing.T) {
+	targets := map[uint64]bool{0x7f0a12345678: true}
+	buf := append([]byte{0xAB}, le64(0x7f0a12345678)...)
+
+	refs := FindPointerReferencesMulti(buf, 0, targets)
+	if len(refs) != 0 {
+		t.Fatalf("expected 0 aligned refs, got %d: %+v", len(refs), refs)
+	}
+}
+
+func TestFindPointerReferencesMulti_EmptyTargetsFindsNothing(t *testing.T) {
+	buf := le64(0x1234)
+	refs := FindPointerReferencesMulti(buf, 0, map[uint64]bool{})
+	if len(refs) != 0 {
+		t.Fatalf("expected 0 refs against an empty target set, got %d: %+v", len(refs), refs)
+	}
+}
