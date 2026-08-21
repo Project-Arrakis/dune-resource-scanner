@@ -8,16 +8,58 @@ second resource + ore/stone/fiber types), then integrate them into the Live Map 
 contradicting some stale references elsewhere). Currently mid-build on a permanent Go tool,
 `dune-resource-scanner`, to replace a Python prototype that hit a real performance wall.
 
+## Session 2 update (2026-08-21, later same day) — v1 core implementation shipped
+- Repo created for real: **`Project-Arrakis/dune-resource-scanner`, private** (user confirmed
+  this org/visibility explicitly this session). `origin` on the local clone already points at
+  it; `main` branch (not `master`).
+- **`internal/memscan` fully implemented via TDD** (18 tests, all green): `maps.go` (`/proc/<pid>/maps`
+  parsing + `Region`/`FilterExecutable`/`FilterByPathname`), `validate.go` (`ValidTransform` —
+  NaN/out-of-world/exact-origin rejection), `scan.go` (`FindInt32LE` seeded scan, `FindNearbyXY`
+  proximity scan, `FindPointerReferences` backward pointer resolution), `actor.go`
+  (`ValidateActor` — the full vtable/ClassPrivate/RootComponent/Transform chain, tested against a
+  fake in-memory `MemReader`, no live process needed), `procmem.go` (`ProcMem` implementing
+  `MemReader` over any `io.ReaderAt`, `ReadRegion` helper). All clean-room, matches the design in
+  "What the Go tool needs to do" below exactly — never read the Python prototype's source.
+- **`cmd/dune-resource-scanner/main.go`**: CLI wiring, `-mode seed|proximity`, `-seeds
+  label=value,...`, `-near x,y`, `-tolerance`, JSON output (`label`/`value`/position/etc.).
+  Deliberately scoped as untested "thin glue" (declared as such in issue #1 before writing it) —
+  verify this manually against `dune-dev`, don't assume it's correct from the tests alone.
+- **CI wired and verified green**, both on the PR and on `main` post-merge (Requirement 1/11):
+  `go build`/`go vet`/`gofmt`/`go test -race -cover`, plus `Project-Arrakis/.github`'s
+  `reusable-security-scan.yml@main` (gitleaks/semgrep/trivy — confirmed merged to that repo's
+  `main` this session, superseding the "still unmerged" note that used to be in the meta README).
+  Branch protection on `main` requires all four checks + no force-push/deletion. Dependabot
+  (gomod + github-actions) enabled.
+- gitleaks/semgrep/trivy all ran clean **locally** before every commit, not just in CI.
+- **Cross-compiled successfully**: `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build` produces a
+  static ELF binary, `-help` output confirms flags wire up correctly. **Not yet copied to or run
+  against `dune-dev`** — that's the actual next step, see below.
+- Issue #1 tracks this work and is **intentionally still open** — it covers live verification
+  too, not just the code landing. PR #2 (merged) says as much in its body.
+- Also fixed, same session: a stale claim in the `meta` README saying `Project-Arrakis/.github`
+  PR #1 (the shared security-scan workflow) was still unmerged and every adopting repo pointed
+  at the source branch as a workaround — both were false by the time this was checked (PR #1
+  merged 2026-08-21T22:11:45Z, and all 7 adopting repos, verified directly via the GitHub API,
+  already reference `@main`). Requirement 14 fix, pushed directly to `meta`'s `main` per that
+  repo's own small-doc-change exception.
+
 ## Immediate next step (where this session stopped)
-- Just created `~/projects/repos/dune-resource-scanner` (git initialized, branch `master` not
-  yet renamed to `main`), moved there after starting it in `/tmp` scratchpad by mistake — the
-  user correctly flagged both "why /tmp" (this is permanent, not disposable) and "this should be
-  a repo under Project-Arrakis" (matching this workstream's convention: repos live flat under
-  `~/projects/repos/`, get a real GitHub repo, `CHANGELOG.md`, GitHub Issues, added to the
-  Project Arrakis board).
-- **Not yet decided**: which GitHub org to push to. Two conventions coexist in this ecosystem —
-  `dune-awakening-selfhost-docker` → `Project-Arrakis` org, `r740-dune-deployment-kit` →
-  personal `yacketrj`. Ask the user before creating the real GitHub repo.
+- **Copy the cross-compiled binary to `dune-dev` and run it for real** against the live
+  `DeepDesertServer` process. Nothing below this point has been live-tested yet — the Go
+  implementation is unit-tested and compiles, but has never touched a real `/proc/<pid>/mem`.
+  Expect the first live run to surface at least one real bug (offset math, alignment assumption,
+  a heap region that's bigger/differently-laid-out than assumed) — this is normal, don't treat
+  the design above as gospel until it's actually validated live.
+- Concretely: `ssh dune-dev`, find the game server's PID, `scp` the binary over,
+  `sudo ./dune-resource-scanner -pid <pid> -mode seed -seeds spice-small=5000,spice-medium=150000,spice-large=2500000,mystery=60000`
+  as the first smoke test (this reuses the *already-confirmed-working* seed values from the
+  Python prototype, so a failure here means a bug in the Go rewrite, not new unknown territory).
+  Remember: **check `ps aux | grep dune-resource-scanner` on dune-dev and clean up if a run hangs
+  or times out** (the local-ssh-timeout-doesn't-kill-remote-process lesson from session 1, still
+  applies).
+- Only after seed mode is confirmed working live, move on to the new proximity-scan capability
+  (anchored on the confirmed base position, X=-611736.35, Y=-700183.46) — that's genuinely new,
+  untested-against-reality code, more likely to need iteration.
 - **No Go source written yet** — only `go mod init dune-resource-scanner` ran. Go 1.24.4 is
   available locally on this machine; NOT installed on `dune-dev` — doesn't matter, cross-compile
   locally (`GOOS=linux GOARCH=amd64 go build`) and `scp` the static binary over.
