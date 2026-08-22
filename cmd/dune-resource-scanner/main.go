@@ -70,10 +70,10 @@ func run(args []string, out io.Writer) error {
 	}
 	defer memFile.Close()
 
-	exeRegions := memscan.FilterExecutable(regions)
-	heapRegions := memscan.FilterByPathname(regions, "[heap]")
+	exeRegions := memscan.MainModuleRegions(regions)
+	heapRegions := memscan.HeapLikeRegions(regions)
 	if len(heapRegions) == 0 {
-		return fmt.Errorf("no [heap] region found in %s", mapsPath)
+		return fmt.Errorf("no heap-like (anonymous writable) regions found in %s", mapsPath)
 	}
 
 	isExe := func(addr uint64) bool { return regionSetContains(exeRegions, addr) }
@@ -181,33 +181,46 @@ func scanSeeds(r io.ReaderAt, mem memscan.MemReader, heap []memscan.Region, pair
 // scanProximity finds (X,Y) transform hits near a known position, then
 // resolves each hit back to its owning actor by finding a pointer reference
 // to the root component and walking that back to the actor base address.
+//
+// This does exactly two sequential passes over the heap, regardless of how
+// many hits are found: a naive implementation that re-scans the whole heap
+// for every transform hit is O(hits x heap size) and does not scale once
+// there are dozens of nearby actors (as expected when surveying a whole
+// island rather than one known point) against a multi-gigabyte heap.
 func scanProximity(r io.ReaderAt, mem memscan.MemReader, heap []memscan.Region, nearX, nearY, tolerance float64, isExe, isHeap func(uint64) bool) []result {
-	var results []result
-	for _, txRegion := range heap {
-		txBuf, err := memscan.ReadRegion(r, txRegion)
+	// Pass 1: find every candidate RootComponent address in one sweep.
+	rootComponents := map[uint64]bool{}
+	for _, region := range heap {
+		buf, err := memscan.ReadRegion(r, region)
 		if err != nil {
 			continue
 		}
-		for _, txHit := range memscan.FindNearbyXY(txBuf, txRegion.Start, nearX, nearY, tolerance) {
+		for _, txHit := range memscan.FindNearbyXY(buf, region.Start, nearX, nearY, tolerance) {
 			if txHit < memscan.DefaultOffsets.Transform {
 				continue
 			}
-			rootComponent := txHit - memscan.DefaultOffsets.Transform
+			rootComponents[txHit-memscan.DefaultOffsets.Transform] = true
+		}
+	}
+	if len(rootComponents) == 0 {
+		return nil
+	}
 
-			for _, refRegion := range heap {
-				refBuf, err := memscan.ReadRegion(r, refRegion)
-				if err != nil {
-					continue
-				}
-				for _, refHit := range memscan.FindPointerReferences(refBuf, refRegion.Start, rootComponent) {
-					if refHit < memscan.DefaultOffsets.RootComponent {
-						continue
-					}
-					actorAddr := refHit - memscan.DefaultOffsets.RootComponent
-					if info, ok := memscan.ValidateActor(mem, actorAddr, memscan.DefaultOffsets, isExe, isHeap); ok {
-						results = append(results, result{ActorInfo: info})
-					}
-				}
+	// Pass 2: find every reference to any of those RootComponent addresses
+	// in one more sweep, then validate each as a real actor.
+	var results []result
+	for _, region := range heap {
+		buf, err := memscan.ReadRegion(r, region)
+		if err != nil {
+			continue
+		}
+		for _, ref := range memscan.FindPointerReferencesMulti(buf, region.Start, rootComponents) {
+			if ref.Addr < memscan.DefaultOffsets.RootComponent {
+				continue
+			}
+			actorAddr := ref.Addr - memscan.DefaultOffsets.RootComponent
+			if info, ok := memscan.ValidateActor(mem, actorAddr, memscan.DefaultOffsets, isExe, isHeap); ok {
+				results = append(results, result{ActorInfo: info})
 			}
 		}
 	}
