@@ -73,6 +73,41 @@ func TestRegion_Contains(t *testing.T) {
 	}
 }
 
+// MainModuleRegions must cover every segment of the main binary's image
+// (text, rodata, data), not just the executable-permission one -- confirmed
+// live against dune-dev: a vtable pointer can land in the r--p rodata
+// segment (where UE's relocated vtables/RTTI actually live), not only the
+// r-xp text segment. Checking only the exec-permission region rejected
+// every real actor during the first live test.
+func TestMainModuleRegions_ReturnsAllSegmentsOfTheMainExecutable(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	main := MainModuleRegions(regions)
+	if len(main) != 2 {
+		t.Fatalf("expected 2 segments (r-xp text + r--p rodata) of the main binary, got %d: %+v", len(main), main)
+	}
+	for _, r := range main {
+		if r.Pathname != "/home/dune/DeepDesertServer" {
+			t.Fatalf("unexpected region in main module: %+v", r)
+		}
+	}
+}
+
+func TestMainModuleRegions_ExcludesOtherFiles(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	main := MainModuleRegions(regions)
+	for _, r := range main {
+		if r.Pathname == "/usr/lib/libc.so.6" {
+			t.Fatal("expected an unrelated shared library to be excluded")
+		}
+	}
+}
+
 func TestFilterExecutable_ReturnsOnlyExecRegions(t *testing.T) {
 	regions, err := ParseMaps(newMapsReader())
 	if err != nil {
