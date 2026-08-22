@@ -1,0 +1,1115 @@
+<title>DeepDesert Resource Forensics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f3f4f7;
+    --surface: #ffffff;
+    --surface-2: #eceef3;
+    --text: #1a1f2b;
+    --text-muted: #5b6472;
+    --text-faint: #848d9c;
+    --border: #dde1e8;
+    --border-strong: #c4cad6;
+    --accent: #b5651d;
+    --accent-ink: #8a4d15;
+    --accent-tint: #fbeee0;
+    --accent-tint-border: #edcda3;
+    --ok: #1f7a4d;
+    --ok-tint: #e3f3ea;
+    --ok-border: #b8dfc9;
+    --warn: #92660a;
+    --warn-tint: #fbf1dc;
+    --warn-border: #ecd291;
+    --danger: #ab3131;
+    --danger-tint: #fbe7e7;
+    --danger-border: #eab8b8;
+    --info: #2f5aa8;
+    --info-tint: #e8eefb;
+    --info-border: #bccdec;
+    --code-bg: #1a1f2b;
+    --code-text: #e8e6e0;
+    --code-key: #e0913f;
+    --code-str: #8ec97a;
+    --shadow: 0 1px 2px rgba(20,23,30,0.04), 0 8px 24px -12px rgba(20,23,30,0.12);
+    --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14171e;
+      --surface: #1b2028;
+      --surface-2: #232936;
+      --text: #e7e6e2;
+      --text-muted: #a3abbb;
+      --text-faint: #75808f;
+      --border: #2c3341;
+      --border-strong: #3c4557;
+      --accent: #e0913f;
+      --accent-ink: #f2b06a;
+      --accent-tint: #362314;
+      --accent-tint-border: #56381a;
+      --ok: #5bc490;
+      --ok-tint: #16261e;
+      --ok-border: #2c4a3a;
+      --warn: #dcb24c;
+      --warn-tint: #2c2413;
+      --warn-border: #4a3d20;
+      --danger: #e57e7e;
+      --danger-tint: #2c1a1a;
+      --danger-border: #4a2828;
+      --info: #7fa3e8;
+      --info-tint: #182337;
+      --info-border: #2d3f5e;
+      --code-bg: #0f1319;
+      --code-text: #e7e6e2;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #14171e;
+    --surface: #1b2028;
+    --surface-2: #232936;
+    --text: #e7e6e2;
+    --text-muted: #a3abbb;
+    --text-faint: #75808f;
+    --border: #2c3341;
+    --border-strong: #3c4557;
+    --accent: #e0913f;
+    --accent-ink: #f2b06a;
+    --accent-tint: #362314;
+    --accent-tint-border: #56381a;
+    --ok: #5bc490;
+    --ok-tint: #16261e;
+    --ok-border: #2c4a3a;
+    --warn: #dcb24c;
+    --warn-tint: #2c2413;
+    --warn-border: #4a3d20;
+    --danger: #e57e7e;
+    --danger-tint: #2c1a1a;
+    --danger-border: #4a2828;
+    --info: #7fa3e8;
+    --info-tint: #182337;
+    --info-border: #2d3f5e;
+    --code-bg: #0f1319;
+    --code-text: #e7e6e2;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--accent); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  h1, h2, h3, h4, .eyebrow, nav, .stat-label, .pill, th, .btn, .meta-row {
+    font-family: var(--font-display);
+  }
+  h1, h2, h3, h4 { text-wrap: balance; font-weight: 600; color: var(--text); }
+  code, pre, kbd, .mono, .addr, td.mono { font-family: var(--font-mono); }
+
+  /* ---------- Layout shell ---------- */
+  .shell {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    max-width: 1360px;
+    margin: 0 auto;
+    gap: 0;
+  }
+
+  .toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 2rem 1.25rem 2rem 1.5rem;
+    border-right: 1px solid var(--border);
+    scrollbar-width: thin;
+  }
+  .toc-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+  .toc-brand .glyph { font-size: 1.15rem; }
+  .toc-brand-text {
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+  }
+  .toc-sub {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    margin-bottom: 1.5rem;
+    line-height: 1.4;
+  }
+  .toc-group-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 1.1rem 0 0.4rem;
+  }
+  .toc-group-label:first-of-type { margin-top: 0; }
+  .toc a {
+    display: block;
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 0.28rem 0.5rem;
+    border-radius: 5px;
+    border-left: 2px solid transparent;
+    margin-left: -0.5rem;
+  }
+  .toc a.sub { padding-left: 1.2rem; font-size: 0.79rem; }
+  .toc a:hover { color: var(--text); background: var(--surface-2); }
+  .toc a.active {
+    color: var(--accent-ink);
+    background: var(--accent-tint);
+    border-left-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .toc-toggle { display: none; }
+
+  main { min-width: 0; padding: 3.5rem clamp(1.25rem, 4vw, 4.5rem) 6rem; }
+
+  /* ---------- Header / masthead ---------- */
+  .masthead { margin-bottom: 2.75rem; }
+  .status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1.1rem;
+  }
+  .badge {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    color: var(--text-muted);
+  }
+  .badge--active { color: var(--accent-ink); border-color: var(--accent-tint-border); background: var(--accent-tint); }
+
+  h1.title {
+    font-size: clamp(2.1rem, 4.2vw, 2.9rem);
+    line-height: 1.08;
+    margin: 0 0 0.6rem;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    font-family: var(--font-body);
+    font-size: 1.15rem;
+    color: var(--text-muted);
+    max-width: 62ch;
+    margin: 0 0 1.4rem;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.6rem;
+    font-size: 0.82rem;
+    color: var(--text-faint);
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--border);
+  }
+  .meta-row strong { color: var(--text-muted); font-weight: 500; }
+
+  /* ---------- Stat dashboard ---------- */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 2rem 0 2.5rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    padding: 1.1rem 1.2rem;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+  }
+  .stat-value .unit { font-size: 0.95rem; font-weight: 500; color: var(--text-faint); }
+  .stat-value.accent { color: var(--accent-ink); }
+  .stat-value.ok { color: var(--ok); }
+  .stat-value.warn { color: var(--warn); }
+  .stat-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-top: 0.3rem;
+  }
+
+  /* ---------- Prose sections ---------- */
+  section { margin-bottom: 3.2rem; scroll-margin-top: 1.5rem; }
+  .eyebrow {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin-bottom: 0.4rem;
+  }
+  h2 {
+    font-size: 1.55rem;
+    margin: 0 0 1.1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.18rem; margin: 1.8rem 0 0.7rem; }
+  h4 {
+    font-size: 0.95rem;
+    margin: 1.4rem 0 0.5rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: 0.78rem;
+  }
+  section > p, section > ul, section > ol { max-width: 72ch; }
+  p { margin: 0 0 1rem; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin-bottom: 0.35rem; }
+  section > p:last-child, section > ul:last-child { margin-bottom: 0; }
+
+  strong { font-weight: 700; color: var(--text); }
+
+  /* ---------- Pills ---------- */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.18rem 0.55rem 0.2rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    line-height: 1.5;
+  }
+  .pill--ok { background: var(--ok-tint); color: var(--ok); border: 1px solid var(--ok-border); }
+  .pill--candidate { background: var(--warn-tint); color: var(--warn); border: 1px solid var(--warn-border); }
+  .pill--unconfirmed { background: var(--surface-2); color: var(--text-faint); border: 1px solid var(--border-strong); }
+  .pill--bug { background: var(--danger-tint); color: var(--danger); border: 1px solid var(--danger-border); }
+  .pill--fixed { background: var(--ok-tint); color: var(--ok); border: 1px solid var(--ok-border); }
+  .pill::before { content: "●"; font-size: 0.55em; }
+
+  /* ---------- Callouts ---------- */
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--text-faint);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin: 1.3rem 0;
+    max-width: 74ch;
+    background: var(--surface);
+  }
+  .callout-label {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+    display: block;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout--evidence { border-left-color: var(--ok); background: var(--ok-tint); }
+  .callout--evidence .callout-label { color: var(--ok); }
+  .callout--caveat { border-left-color: var(--warn); background: var(--warn-tint); }
+  .callout--caveat .callout-label { color: var(--warn); }
+  .callout--finding { border-left-color: var(--danger); background: var(--danger-tint); }
+  .callout--finding .callout-label { color: var(--danger); }
+  .callout--note { border-left-color: var(--info); background: var(--info-tint); }
+  .callout--note .callout-label { color: var(--info); }
+
+  /* ---------- Tables ---------- */
+  .table-wrap { overflow-x: auto; margin: 1.2rem 0; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td.wrap { white-space: normal; }
+  th {
+    background: var(--surface-2);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.num, th.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .addr { font-family: var(--font-mono); font-size: 0.85em; color: var(--accent-ink); }
+
+  /* ---------- Code blocks ---------- */
+  .code-wrap { overflow-x: auto; margin: 1.2rem 0; border-radius: 8px; box-shadow: var(--shadow); }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 1.1rem 1.3rem;
+    border-radius: 8px;
+    font-size: 0.83rem;
+    line-height: 1.6;
+    margin: 0;
+    overflow-x: auto;
+  }
+  pre .c { color: #8a94a6; font-style: italic; }
+  pre .k { color: var(--code-key, #e0913f); }
+  pre .s { color: #8ec97a; }
+  code.inline {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.87em;
+  }
+
+  /* ---------- Diagram / chain ---------- */
+  .chain {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 1.4rem 0;
+    max-width: 74ch;
+  }
+  .chain-step {
+    display: grid;
+    grid-template-columns: 1.6rem 1fr;
+    gap: 0.85rem;
+    align-items: start;
+    padding: 0.7rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    position: relative;
+  }
+  .chain-step .n {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--accent-ink);
+    background: var(--accent-tint);
+    border-radius: 50%;
+    width: 1.6rem;
+    height: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+  }
+  .chain-step .body strong { display: block; font-family: var(--font-display); font-size: 0.9rem; margin-bottom: 0.15rem; }
+  .chain-step .body span { font-size: 0.85rem; color: var(--text-muted); }
+  .chain-step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 1.6rem;
+    top: 100%;
+    width: 1px;
+    height: 0.5rem;
+    background: var(--border-strong);
+  }
+
+  /* ---------- Tree ---------- */
+  .tree {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    line-height: 1.75;
+    overflow-x: auto;
+    max-width: 74ch;
+  }
+  .tree .comment { color: var(--text-faint); }
+
+  /* ---------- Section-nav footer links ---------- */
+  .prev-next {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .prev-next a {
+    text-decoration: none;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .prev-next a:hover { color: var(--accent); }
+
+  footer.doc-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+    color: var(--text-faint);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 920px) {
+    .shell { grid-template-columns: 1fr; }
+    .toc {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 82vw;
+      max-width: 320px;
+      background: var(--surface);
+      z-index: 40;
+      transform: translateX(-100%);
+      transition: transform 0.22s ease;
+      box-shadow: var(--shadow);
+    }
+    .toc.open { transform: translateX(0); }
+    .toc-scrim {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,12,16,0.4);
+      z-index: 30;
+    }
+    .toc-scrim.open { display: block; }
+    .toc-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      z-index: 50;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0.5rem 0.8rem;
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+    }
+    main { padding-top: 4.5rem; }
+  }
+
+  @media print {
+    .toc, .toc-toggle, .toc-scrim { display: none !important; }
+    .shell { grid-template-columns: 1fr; }
+    body { background: #fff; color: #000; }
+  }
+</style>
+
+<div class="shell">
+  <button class="toc-toggle" id="tocToggle" aria-expanded="false" aria-controls="tocNav">☰ Contents</button>
+  <div class="toc-scrim" id="tocScrim"></div>
+
+  <nav class="toc" id="tocNav" aria-label="Table of contents">
+    <div class="toc-brand"><span class="glyph">🔍</span><span class="toc-brand-text">DeepDesert Forensics</span></div>
+    <div class="toc-sub">Technical findings report — cross-discipline review</div>
+
+    <div class="toc-group-label">Report</div>
+    <a href="#summary">1 · Executive summary</a>
+    <a href="#scope">2 · Scope &amp; objectives</a>
+    <a href="#system">3 · System under investigation</a>
+    <a href="#methodology">4 · Methodology</a>
+
+    <div class="toc-group-label">Technical detail</div>
+    <a href="#architecture">5 · Technical architecture</a>
+    <a href="#evidence">6 · Ground-truth validation</a>
+    <a href="#bugs">7 · Defects found &amp; fixed</a>
+    <a href="#survey">8 · Island survey results</a>
+    <a href="#negative">9 · DB investigation (negative)</a>
+    <a href="#rejected">10 · Rejected approach</a>
+
+    <div class="toc-group-label">Review</div>
+    <a href="#disciplines">11 · Per-discipline assessment</a>
+    <a class="sub" href="#d-security">11.1 Security</a>
+    <a class="sub" href="#d-grc">11.2 GRC</a>
+    <a class="sub" href="#d-dba">11.3 DBA</a>
+    <a class="sub" href="#d-arch">11.4 Architecture</a>
+    <a class="sub" href="#d-qa">11.5 QA / Test</a>
+    <a class="sub" href="#d-net">11.6 Network</a>
+    <a href="#recommendations">12 · Open questions</a>
+
+    <div class="toc-group-label">Appendices</div>
+    <a href="#appendix-a">A · Commit/PR reference</a>
+    <a href="#appendix-b">B · Glossary</a>
+    <a href="#appendix-c">C · Reproduction</a>
+  </nav>
+
+  <main>
+    <header class="masthead">
+      <div class="status-row">
+        <span class="badge badge--active">Active investigation</span>
+        <span class="badge">Project-Arrakis / dune-resource-scanner</span>
+        <span class="badge">Issue #1 · open</span>
+      </div>
+      <h1 class="title">DeepDesert Resource Forensics</h1>
+      <p class="subtitle">Live memory-forensics investigation of Dune Awakening's DeepDesert server: a proven-correct scanning methodology, four defects found and fixed under live conditions, and an honest account of what remains unidentified.</p>
+      <div class="meta-row">
+        <span><strong>Prepared for</strong> Software Architecture · Security · DBA · GRC · QA</span>
+        <span><strong>Date</strong> 2026-08-21 – 2026-08-22</span>
+        <span><strong>HEAD</strong> <span class="mono">077bf9c</span></span>
+      </div>
+    </header>
+
+    <div class="stat-grid" role="group" aria-label="Key figures">
+      <div class="stat-card"><div class="stat-value">41</div><div class="stat-label">Unit tests, TDD</div></div>
+      <div class="stat-card"><div class="stat-value">89.2<span class="unit">%</span></div><div class="stat-label">Core coverage</div></div>
+      <div class="stat-card"><div class="stat-value">4</div><div class="stat-label">Defects found &amp; fixed live</div></div>
+      <div class="stat-card"><div class="stat-value ok">2</div><div class="stat-label">Classes proven identified</div></div>
+      <div class="stat-card"><div class="stat-value warn">26</div><div class="stat-label">Classes unidentified</div></div>
+      <div class="stat-card"><div class="stat-value accent">1,442</div><div class="stat-label">Actor positions located</div></div>
+    </div>
+
+    <section id="summary">
+      <span class="eyebrow">Section 1</span>
+      <h2>Executive summary</h2>
+      <p>This report documents the design, implementation, and live findings of <code class="inline">dune-resource-scanner</code>, a Go tool that locates Dune Awakening raw-resource world positions by reading a live game server process's memory (<code class="inline">/proc/&lt;pid&gt;/mem</code>). The tool exists because the game does not track most raw-resource types (ore, stone, fiber) in its database at all — memory inspection is the only way to find their positions for the Live Map feature planned in <code class="inline">dune-awakening-selfhost-docker</code>.</p>
+
+      <h4>What is proven</h4>
+      <ul>
+        <li>The tool's core scanning/validation logic is unit-tested (41 tests, 89.2% statement coverage of <code class="inline">internal/memscan</code>) and was <strong>independently proven correct against known ground truth</strong>: the tool's own class-identification output for two DB-confirmed resource types produced <strong>exact address matches</strong> against class pointers derived from an entirely separate scan method (§6).</li>
+        <li>Four real defects were found and fixed through live testing against the production-adjacent <code class="inline">dune-dev</code> host, each with an independent, reproducible root-cause diagnosis before the fix was written (§7).</li>
+        <li>A process/GRC defect was self-identified and corrected: Issue #1 auto-closed on a PR merge due to GitHub's literal handling of the word "Closes" in a PR body, contradicting the PR's own stated intent (§11.2).</li>
+      </ul>
+
+      <h4>What is not proven</h4>
+      <ul>
+        <li>Of ~28 distinct object classes found near the base's home island, only <strong>2 have confirmed identity</strong> (spice, and a second DB-tracked resource informally called "mystery"). <strong>26 remain unidentified.</strong> The strongest candidate for "Titanium Ore" matches the operator's stated in-game observation on count and spatial character, but this is <span class="pill pill--candidate">candidate</span> evidence, not proof (§8, §10).</li>
+        <li>A path to full identity resolution via Unreal Engine internals was considered and <strong>deliberately not attempted</strong> — see the risk analysis in §10.</li>
+      </ul>
+
+      <div class="callout callout--note">
+        <span class="callout-label">How to read this report</span>
+        <p>Section 11 is structured so each reviewing discipline can jump directly to their area without reading the full technical narrative — but every claim there is backed by evidence in §5–§9. Use the sidebar to navigate.</p>
+      </div>
+    </section>
+
+    <section id="scope">
+      <span class="eyebrow">Section 2</span>
+      <h2>Scope &amp; objectives</h2>
+      <ol>
+        <li>Produce real-world positions for every raw-resource type in Dune Awakening (spice, an unidentified second DB-tracked resource, and 13 named ore/stone/fiber types with zero database tracking).</li>
+        <li>Do so with a tool that is safe to run repeatedly against a live, player-facing game server: read-only, no continuous privileged process, no impact to server performance or availability beyond a bounded, on-demand scan.</li>
+        <li>Produce output that can feed a future Live Map integration in <code class="inline">dune-awakening-selfhost-docker</code> (out of scope for this report — tracked separately in <code class="inline">CONTINUATION.md</code>).</li>
+      </ol>
+      <p>This report covers steps 1–2 as executed against <code class="inline">dune-dev</code> (192.168.21.10), the non-production development instance of the game server stack. It does not cover the Live Map integration itself.</p>
+    </section>
+
+    <section id="system">
+      <span class="eyebrow">Section 3</span>
+      <h2>System under investigation</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fact</th><th>Value</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td>Target process</td><td class="wrap"><code class="inline">DuneSandboxServer-Linux-Shipping</code> (DeepDesert_1, PvP partition 32)</td><td class="wrap"><code class="mono">ps aux</code> on dune-dev, this session</td></tr>
+            <tr><td>PID at investigation time</td><td class="mono">3693040</td><td>same</td></tr>
+            <tr><td>Host</td><td class="wrap">dune-dev, 192.168.21.10, <span class="mono">duneawakening-2</span></td><td class="wrap"><span class="mono">ssh dune-dev "uname -a"</span></td></tr>
+            <tr><td>Host OS</td><td class="wrap">Ubuntu 26.04 LTS, kernel 7.0.0-29-generic</td><td class="wrap"><span class="mono">/etc/os-release</span></td></tr>
+            <tr><td>Host RAM</td><td>48GiB total, 24GiB available</td><td class="wrap"><span class="mono">free -h</span></td></tr>
+            <tr><td>Target heap-like footprint</td><td>~16.7–20GB / 399–669 regions</td><td class="wrap">region-size sums, this session</td></tr>
+            <tr><td>Orchestration</td><td class="wrap"><code class="inline">dune</code> CLI; DeepDesert_1 set to <code class="inline">always-on</code> this session</td><td class="wrap"><span class="mono">dune maps mode</span></td></tr>
+            <tr><td>Access method</td><td class="wrap">SSH + passwordless sudo</td><td class="wrap">this session</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Per this workstream's own operating rules, <code class="inline">dune-dev</code> is an explicitly sanctioned environment for exactly this kind of read-only, exploratory work. <strong>dune-prod was never touched.</strong></p>
+    </section>
+
+    <section id="methodology">
+      <span class="eyebrow">Section 4</span>
+      <h2>Methodology</h2>
+
+      <h3>4.1 Why a clean-room Go implementation</h3>
+      <p>An earlier prototype (Python, third-party) was reviewed and found functionally useful but <strong>license-unresolved</strong> — no <code class="inline">LICENSE</code> file, no identifiable author, and the project's own <code class="inline">NOTICE.md</code> explicitly disclaimed redistribution. Because this tool is meant to be a permanent, recurring part of this workstream's tooling, it was rewritten from scratch based only on independently re-derived facts — not ported from, or written with reference to, the prototype's source. This resolves the license question for the resulting artifact entirely.</p>
+      <p>A secondary, independent reason to prefer Go: the prototype's byte-pattern searches were fast because they used a C-level primitive (<code class="inline">bytes.find()</code>); the <strong>new</strong> capability this rewrite exists for — scanning for a numeric coordinate pair near a known position across a multi-gigabyte heap — has no equivalent fast stdlib primitive in Python, and pure-Python loops over it timed out repeatedly. Go's compiled, statically-typed loops solve this directly.</p>
+
+      <h3>4.2 Test-driven development discipline</h3>
+      <p>All logic in <code class="inline">internal/memscan</code> was written test-first: a failing test was written and its failure verified before any implementation code. This produced 41 tests exercising:</p>
+      <ul>
+        <li><code class="inline">/proc/&lt;pid&gt;/maps</code> parsing and region classification — 12 tests</li>
+        <li>World-position plausibility validation — 5 tests</li>
+        <li>Byte-pattern and pointer-reference scanning — 11 tests</li>
+        <li>The full actor-shape validation chain, against a fake in-memory <code class="inline">MemReader</code> — 7 tests</li>
+        <li>The <code class="inline">/proc/&lt;pid&gt;/mem</code> I/O layer, against an in-memory stand-in — 6 tests</li>
+      </ul>
+      <p><code class="inline">cmd/dune-resource-scanner/main.go</code> (CLI wiring) was <strong>deliberately scoped as untested "thin glue"</strong> — stated explicitly in GitHub issue #1 before the code was written, verified instead by live testing against the real process.</p>
+
+      <h3>4.3 Live-verification discipline</h3>
+      <p>Every change went through a standard branch → PR → CI → merge cycle (Appendix A). CI runs build/vet/gofmt/test plus the organization's shared gitleaks + semgrep + trivy security-scan workflow on every push. All local commits were additionally scanned before being pushed. No commit in this investigation's history has a failing CI run on <code class="inline">main</code>.</p>
+    </section>
+
+    <section id="architecture">
+      <span class="eyebrow">Section 5</span>
+      <h2>Technical architecture</h2>
+
+      <h3>5.1 Package structure</h3>
+      <div class="tree">internal/memscan/ <span class="comment">— all core logic, unit-tested, no live-process dependency</span>
+├── maps.go / maps_test.go        <span class="comment">— /proc/&lt;pid&gt;/maps parsing, region classification</span>
+├── validate.go / validate_test.go <span class="comment">— world-position plausibility checks</span>
+├── scan.go / scan_test.go        <span class="comment">— byte-pattern &amp; pointer-reference scanning</span>
+├── actor.go / actor_test.go      <span class="comment">— the actor-shape validation chain</span>
+└── procmem.go / procmem_test.go  <span class="comment">— /proc/&lt;pid&gt;/mem I/O, over any io.ReaderAt</span>
+
+cmd/dune-resource-scanner/
+└── main.go  <span class="comment">— CLI wiring only (untested by design, §4.2)</span></div>
+      <p><strong>1,204 lines</strong> total across all Go source (production + test).</p>
+
+      <h3>5.2 The actor-shape validation chain</h3>
+      <p>Unreal Engine game objects (<code class="inline">AActor</code> subclasses) have a predictable, low-level memory shape that can be validated without any engine symbols, by following a chain of pointers and checking each one lands in a plausible memory region. The chain, from <code class="inline">internal/memscan/actor.go:42</code>:</p>
+
+      <div class="chain">
+        <div class="chain-step"><span class="n">1</span><div class="body"><strong>vtable pointer</strong><span>Read at the actor's own address — must fall inside the game binary's mapped image</span></div></div>
+        <div class="chain-step"><span class="n">2</span><div class="body"><strong>ClassPrivate pointer</strong><span>Read at offset +16 — must fall inside a heap-like region</span></div></div>
+        <div class="chain-step"><span class="n">3</span><div class="body"><strong>ClassPrivate's own vtable</strong><span>Read at ClassPrivate — must <em>also</em> fall inside the game binary's mapped image</span></div></div>
+        <div class="chain-step"><span class="n">4</span><div class="body"><strong>RootComponent pointer</strong><span>Read at offset +576 — must fall inside a heap-like region</span></div></div>
+        <div class="chain-step"><span class="n">5</span><div class="body"><strong>Transform (X, Y, Z)</strong><span>3 consecutive float64s at RootComponent +384 — must pass plausibility checks</span></div></div>
+      </div>
+
+      <div class="code-wrap"><pre>func ValidateActor(mem MemReader, addr uint64, off Offsets, isExe, isHeap func(uint64) bool) (ActorInfo, bool) {
+    vtable, err := mem.ReadU64(addr)
+    if err != nil || !isExe(vtable) { return ActorInfo{}, false }             <span class="c">// step 1</span>
+
+    classPrivate, err := mem.ReadU64(addr + off.ClassPrivate)
+    if err != nil || !isHeap(classPrivate) { return ActorInfo{}, false }      <span class="c">// step 2</span>
+
+    classVtable, err := mem.ReadU64(classPrivate)
+    if err != nil || !isExe(classVtable) { return ActorInfo{}, false }       <span class="c">// step 3</span>
+
+    rootComponent, err := mem.ReadU64(addr + off.RootComponent)
+    if err != nil || !isHeap(rootComponent) { return ActorInfo{}, false }    <span class="c">// step 4</span>
+
+    x, y, z := <span class="c">/* 3 consecutive float64 reads at rootComponent + off.Transform */</span>
+    if !ValidTransform(x, y, z) { return ActorInfo{}, false }                <span class="c">// step 5</span>
+
+    baseValue, _ := mem.ReadI32(addr + off.BaseValue)
+    return ActorInfo{Addr: addr, X: x, Y: y, Z: z, BaseValue: baseValue, ClassPrivate: classPrivate}, true
+}</pre></div>
+
+      <p>Every one of the five gating checks must pass. This is the primary defense against false positives from coincidentally-matching byte patterns in a multi-gigabyte heap — §7's Bug 3 is a concrete case where getting one check (<code class="inline">isExe</code>) wrong caused <strong>100% of otherwise-correct candidates to be silently rejected</strong>.</p>
+
+      <p><code class="inline">ValidTransform</code> (<code class="inline">validate.go:12</code>) rejects: any NaN component, any X/Y magnitude greater than 1,250,000 (the world coordinate bound), and the exact origin (0,0,0) — the value an uninitialized/null actor reads as.</p>
+
+      <h3>5.3 Memory region classification — two corrected assumptions</h3>
+      <p>Two functions determine which regions are searched and which regions a discovered pointer is allowed to point into. <strong>Both were wrong in their first implementation</strong> and fixed after live testing exposed the error (full narrative in §7):</p>
+      <ul>
+        <li><strong><code class="inline">MainModuleRegions</code></strong> (<code class="inline">maps.go:95</code>) — every region backed by the same file as the main game binary (text <em>and</em> rodata <em>and</em> data), because relocated C++ vtables live in the read-only rodata segment, not the executable-permission text segment.</li>
+        <li><strong><code class="inline">HeapLikeRegions</code></strong> (<code class="inline">maps.go:116</code>) — the classic glibc <code class="inline">[heap]</code> <em>plus every anonymous writable mmap region</em>, because Unreal Engine uses its own memory allocator, and <code class="inline">[heap]</code> alone was found to hold only ~3MB of a ~16.7–20GB total footprint.</li>
+      </ul>
+
+      <h3>5.4 Scanning algorithms</h3>
+      <p><strong>Seeded scan</strong> (<code class="inline">FindInt32LE</code>) — given a known numeric value (e.g. a spice tier's tracked quantity), finds every 4-byte-aligned occurrence as a little-endian int32, walks backward to a candidate actor address, and validates via §5.2's chain.</p>
+      <p><strong>Proximity scan</strong> (<code class="inline">FindNearbyXY</code> + <code class="inline">FindPointerReferencesMulti</code>) — the genuinely new capability this rewrite exists for: given a known nearby world position and a tolerance, finds actors near it with <strong>no prior knowledge of any tracked value</strong>. Implemented as exactly two full sequential heap passes, independent of hit count:</p>
+      <ol>
+        <li><strong>Pass 1</strong> scans every heap-like region once for (X, Y) pairs within tolerance, collecting candidate RootComponent addresses.</li>
+        <li><strong>Pass 2</strong> scans every heap-like region <em>once more</em>, checking every 8-byte-aligned value against the <em>entire set</em> from pass 1 simultaneously — instead of once per candidate.</li>
+      </ol>
+      <p>This directly replaced a first implementation that re-scanned the whole heap <strong>per hit found</strong> — see §7 Bug 2.</p>
+
+      <h3>5.5 Empirically-derived offset table</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Constant</th><th class="num">Value</th><th>Meaning</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">ClassPrivate</td><td class="num mono">16</td><td class="wrap">UObject-level: offset to the actor's UClass pointer</td><td class="wrap">Re-derived &amp; re-confirmed this session</td></tr>
+            <tr><td class="mono">RootComponent</td><td class="num mono">576</td><td class="wrap">AActor-level: offset to root scene-component pointer</td><td class="wrap">Re-derived this session</td></tr>
+            <tr><td class="mono">Transform</td><td class="num mono">384</td><td class="wrap">Offset within root component to 3× float64 (X/Y/Z)</td><td class="wrap">Re-derived this session</td></tr>
+            <tr><td class="mono">BaseValue</td><td class="num mono">1440</td><td class="wrap">Offset within actor to a "full/base" numeric field</td><td class="wrap">Confirmed identical for spice &amp; mystery</td></tr>
+            <tr><td class="mono">World bound</td><td class="num mono">±1,250,000</td><td class="wrap">Maximum plausible X/Y magnitude</td><td class="wrap">Observed world-geometry bound</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>These are facts about the compiled game binary's memory layout (not copyrightable expression), independently re-derived and empirically re-verified this session — not sourced from the license-unresolved Python prototype (§4.1).</p>
+    </section>
+
+    <section id="evidence">
+      <span class="eyebrow">Section 6</span>
+      <h2>Evidence: ground-truth validation</h2>
+      <p>This is the <strong>central proof point</strong> of the entire investigation: independent confirmation that the tool's class-identification is correct, using data the tool did not have when it made its original classification.</p>
+
+      <h4>Step 1 — seed-mode scan</h4>
+      <div class="code-wrap"><pre>$ dune-resource-scanner -pid 3693040 -mode seed \
+    -seeds spice-small=5000,spice-medium=150000,spice-large=2500000,mystery=60000</pre></div>
+      <p>Result: 909 validated actors — <span class="mono">spice-small=281, spice-medium=89, spice-large=6, mystery=533</span>.</p>
+      <div class="callout callout--evidence">
+        <span class="callout-label">Evidence</span>
+        <p>The <strong>mystery=533</strong> figure is an exact match to the "533-position pool" independently found in a prior session via a completely different method (direct SQL query against <code class="inline">dune.resourcefield_state</code>) — strong evidence the actor-validation chain finds the <em>complete, correct</em> population, not an approximation.</p>
+      </div>
+
+      <h4>Step 2 — class pointers per label</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Label</th><th>ClassPrivate (shared by all instances)</th></tr></thead>
+          <tbody>
+            <tr><td>spice-small</td><td class="addr">0x75c26017b270</td></tr>
+            <tr><td>spice-medium</td><td class="addr">0x75c25f246970</td></tr>
+            <tr><td>spice-large</td><td class="addr">0x75c236912500</td></tr>
+            <tr><td>mystery</td><td class="addr">0x75c25f247290</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Step 3 — independent cross-check</h4>
+      <p>A separate, unrelated wide-area proximity scan centered on the player's base (<span class="mono">-mode proximity -near -611736.35,-700183.46 -tolerance 100000</span>) — which uses <strong>no seed values at all</strong> and works purely from spatial position — was grouped by <code class="inline">ClassPrivate</code> with no reference to the Step 2 table.</p>
+
+      <div class="callout callout--evidence">
+        <span class="callout-label">Result</span>
+        <p>Two of the independently-discovered class-pointer groups — <span class="addr">0x75c25f247290</span> (3 members, 82,906–98,725 units from base) and <span class="addr">0x75c26017b270</span> (3 members, 31,184–84,392 units from base) — are <strong>byte-for-byte identical</strong> to mystery's and spice-small's pointers from Step 2.</p>
+      </div>
+
+      <p>This is not a coincidence a broken or over-permissive validator could produce: <code class="inline">ClassPrivate</code> is a live heap pointer whose exact value depends on runtime allocation order, specific to this one process instance. Two entirely different search strategies — numeric-seed search vs. spatial-proximity search — executed independently, converging on the exact same pointer value for the exact same known object type is direct evidence the actor-shape validation chain (§5.2) finds real, correctly-typed objects, not an artifact of a loose heuristic.</p>
+    </section>
+
+    <section id="bugs">
+      <span class="eyebrow">Section 7</span>
+      <h2>Findings: defects found and fixed</h2>
+      <p>All four defects were found by testing against the real <code class="inline">dune-dev</code> process, each confirmed via an <strong>independent diagnostic</strong> — a standalone Python script re-implementing the relevant check by hand against live memory — <strong>before</strong> the corresponding Go fix was written.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Defect</th><th>Symptom</th><th>Root cause</th><th>Fix</th><th>PR</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="pill pill--fixed">Fixed</span></td>
+              <td class="wrap"><code class="inline">[heap]</code>-only region scan</td>
+              <td class="wrap">0 actors on first live run</td>
+              <td class="wrap"><code class="inline">[heap]</code> ~3MB; real allocations in anonymous rw mmap regions up to 4GB each</td>
+              <td class="wrap"><code class="inline">HeapLikeRegions</code></td>
+              <td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/6">#6</a></td>
+            </tr>
+            <tr>
+              <td><span class="pill pill--fixed">Fixed</span></td>
+              <td class="wrap">O(hits × heap size) proximity scan</td>
+              <td class="wrap">Would re-read ~16.7–20GB per hit — untenable for island survey</td>
+              <td class="wrap">Original design re-scanned the whole heap inside the per-hit loop</td>
+              <td class="wrap">Two-pass streaming design</td>
+              <td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/7">#7</a></td>
+            </tr>
+            <tr>
+              <td><span class="pill pill--fixed">Fixed</span></td>
+              <td class="wrap">Vtable validated against exec-permission segment only</td>
+              <td class="wrap">0 actors <em>even after fixing #1</em> — 2,606 raw hits existed, all failed step 1</td>
+              <td class="wrap">Main binary loads as 3 segments; vtables live in the read-only rodata segment</td>
+              <td class="wrap"><code class="inline">MainModuleRegions</code></td>
+              <td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/8">#8</a></td>
+            </tr>
+            <tr>
+              <td><span class="pill pill--fixed">Fixed</span></td>
+              <td class="wrap"><code class="inline">ActorInfo</code> omitted <code class="inline">ClassPrivate</code></td>
+              <td class="wrap">No way to group found actors by real class</td>
+              <td class="wrap">Field already read during validation, never returned</td>
+              <td class="wrap">Added field</td>
+              <td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/9">#9</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout--finding">
+        <span class="callout-label">Detailed evidence — Bug 3</span>
+        <p>The most significant defect, and the one that produced §6's ground-truth validation. A standalone diagnostic re-implemented the exact chain in Python against the same live process. Before the fix, the diagnostic (matching the <em>old</em> logic) validated <strong>0 of 2,606</strong> raw hits. After applying the corrected logic, the same 2,606 hits validated <strong>281 real actors</strong> — the exact same count later reproduced by the actual Go binary once the fix was merged.</p>
+      </div>
+    </section>
+
+    <section id="survey">
+      <span class="eyebrow">Section 8</span>
+      <h2>Findings: island survey results</h2>
+
+      <h3>8.1 Methodology note: tolerance semantics</h3>
+      <p><code class="inline">FindNearbyXY</code>'s <code class="inline">-tolerance</code> flag is a <strong>per-axis box half-width</strong>, not a Euclidean radius: <code class="inline">-tolerance 50000</code> searches a 100,000×100,000-unit box centered on <code class="inline">-near</code>, not a 50,000-unit-radius circle.</p>
+
+      <h3>8.2 Base-part exclusion — a methodology correction</h3>
+      <div class="callout callout--caveat">
+        <span class="callout-label">Self-correction</span>
+        <p>An intermediate analysis pass flagged several large classes (34–75 members) as "almost certainly base-building components" based on some instances having Z exactly 0.0. <strong>This claim was checked against its own premise and found false</strong>: those classes' closest member to the base is 11,000+ units away — far outside any building footprint. Retracted, not left standing. The actual base-building classes were separately confirmed via a genuinely tight <code class="inline">-tolerance 3000</code> scan: 13 distinct classes, 1–2 members each, no overlap with the mis-flagged classes.</p>
+      </div>
+      <p>Preserved deliberately in <code class="inline">CONTINUATION.md</code> as a documented example of catching an unverified claim before it propagated further.</p>
+
+      <h3>8.3 Final class survey</h3>
+      <p><code class="inline">-tolerance 100000</code> (a 200,000×200,000-unit box): 533 total actors, 97 distinct classes, 26 with ≥3 members after excluding the 2 known-identity classes. Full raw data: <code class="inline">findings/2026-08-21-base-island-survey.json</code>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ClassPrivate</th><th class="num">n</th><th>Distance range (units)</th><th>Z range</th><th>Identity</th></tr></thead>
+          <tbody>
+            <tr><td class="addr">0x75c2c1b8ea00</td><td class="num">75</td><td class="mono">11,222–134,530</td><td class="mono">−95–14,770</td><td><span class="pill pill--unconfirmed">Unidentified</span></td></tr>
+            <tr><td class="addr">0x75c2c1b8e1c0</td><td class="num">67</td><td class="mono">11,222–132,366</td><td class="mono">−95–14,770</td><td><span class="pill pill--unconfirmed">Unidentified</span></td></tr>
+            <tr><td class="addr">0x75c2c2001bc0</td><td class="num">67</td><td class="mono">14,931–98,619</td><td class="mono">1,393–9,672</td><td><span class="pill pill--unconfirmed">Unidentified</span></td></tr>
+            <tr><td class="addr">0x75c3008c1380</td><td class="num">34</td><td class="mono">11,222–132,366</td><td class="mono">0–1,970</td><td><span class="pill pill--unconfirmed">Unidentified</span></td></tr>
+            <tr><td class="addr">0x75c268f7ade0</td><td class="num"><strong>28</strong></td><td class="mono">8,166–48,680 <span style="color:var(--text-faint)">(gap to 67,152+)</span></td><td class="mono">867–5,141</td><td><span class="pill pill--candidate">Candidate: Titanium Ore</span></td></tr>
+            <tr><td class="addr">0x75c2c1de6340</td><td class="num">25</td><td class="mono">8,810–120,973</td><td class="mono">767–4,165</td><td><span class="pill pill--unconfirmed">Unidentified</span></td></tr>
+            <tr><td class="addr">0x75c26e883bd0</td><td class="num">16</td><td class="mono">13,631–98,133</td><td class="mono">1,615–6,000</td><td><span class="pill pill--unconfirmed">Unidentified</span></td></tr>
+            <tr><td class="wrap" colspan="5" style="color:var(--text-faint); font-style:italic;">…19 more classes, n = 3–12, see the JSON data file</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>8.4 The Titanium Ore candidate — evidence and confidence level</h3>
+      <p><span class="addr">0x75c268f7ade0</span> is the <strong>strongest single candidate</strong> for the resource type the operator described in-game ("at least 20, if not more" Titanium Ore nodes):</p>
+      <ul>
+        <li><strong>Count</strong>: 28 members within a clean, isolated distance band — directly consistent with "at least 20."</li>
+        <li><strong>Spatial pattern</strong>: irregular, non-grid-aligned spacing, consistent with natural terrain placement.</li>
+        <li><strong>Elevation</strong>: Z varies naturally across 867–5,141 with no suspicious exact values.</li>
+        <li><strong><code class="inline">BaseValue</code> uniformly 0</strong> across all 28 — expected for a resource type absent from <code class="inline">dune.resourcefield_state</code> (§9).</li>
+        <li><strong>A clean spatial discontinuity</strong>: after the 20th member (48,680 units), the next members of the same class appear only from 67,152 units — plausibly other Titanium deposits on distant islands.</li>
+      </ul>
+      <div class="callout callout--caveat">
+        <span class="callout-label">Confidence level</span>
+        <p>This is <strong>circumstantial evidence, not proof</strong>. No independent verification (visual in-game check, or resolved class name) was obtained before this report was written. §10 documents why a further, riskier verification path was considered and rejected.</p>
+      </div>
+    </section>
+
+    <section id="negative">
+      <span class="eyebrow">Section 9</span>
+      <h2>Negative finding: no server-side tracking for ore-type resources</h2>
+      <p>Per this project's <code class="inline">dune database</code> tooling — a direct, read-only SQL interface into the game's PostgreSQL instance (§11.3) — the following tables were checked as candidate sources of ore/stone/fiber position or type data, and <strong>all were ruled out</strong>:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Table</th><th>Purpose (actual)</th><th>Why it doesn't help</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">actor_spawners</td><td class="wrap">Player-start spawn points, NPC/encounter spawners</td><td class="wrap">Zero rows relate to resource nodes — confirmed by enumerating every distinct name for DeepDesert</td></tr>
+            <tr><td class="mono">fgl_entities</td><td class="wrap">Real per-entity ECS store (jsonb components)</td><td class="wrap">Only 1,175 rows; every component type relates to player-persisted objects, not ambient resources</td></tr>
+            <tr><td class="mono">resourcefield_state</td><td class="wrap">Spice + mystery</td><td class="wrap">Confirmed useful — but explicitly has no rows for ore/stone/fiber</td></tr>
+            <tr><td class="mono">actors</td><td class="wrap">General actor registry</td><td class="wrap">Checked while standing on a Titanium node in a prior session — only player-owned rows</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout--finding">
+        <span class="callout-label">Conclusion — confirmed independently twice</span>
+        <p>Raw ore/stone/fiber resources have <strong>zero server-side position or type tracking of any kind</strong>. Live memory scanning is the only currently-known method to locate them.</p>
+      </div>
+    </section>
+
+    <section id="rejected">
+      <span class="eyebrow">Section 10</span>
+      <h2>Rejected approach: UClass/FName reverse engineering</h2>
+      <p>To move the Titanium Ore candidate (§8.4) from "strong circumstantial evidence" to "proven," the tool would need to resolve the actual class <strong>name</strong> string from a <code class="inline">ClassPrivate</code> pointer. This was considered and <strong>deliberately not attempted</strong> — not because it seemed too hard, but for a specific, stated reason.</p>
+      <p>Unreal Engine resolves object names via <code class="inline">FName</code>, an index into a global name pool, rather than a raw string. Resolving one requires knowing, for this specific engine build:</p>
+      <ol>
+        <li>The byte offset of <code class="inline">UObject::NamePrivate</code> within the object header — not currently known.</li>
+        <li>The <code class="inline">FNamePool</code>'s block/offset encoding scheme — varies across engine versions, not confirmed for this build.</li>
+      </ol>
+      <div class="callout callout--caveat">
+        <span class="callout-label">Risk analysis</span>
+        <p>The risk is not merely that this might fail — it is that a wrong guess at either unknown would produce a <strong>plausible-looking, confidently wrong</strong> class name, strictly worse for downstream consumers (including a future Live Map feature) than the current, honestly-labeled "unconfirmed candidate" status. An unverified inference is a hypothesis, not a fact, until independently confirmed against ground truth — and no ground truth exists here to verify a guessed <code class="inline">FNamePool</code> encoding against, unlike §6's validation, which had spice/mystery as independently-known-correct anchors.</p>
+      </div>
+      <h4>Recommended path instead</h4>
+      <p>A single in-game visual check of the closest Titanium candidate (X=−612311.21, Y=−708329.60, Z=4396.67, ~8,166 units from the base) would resolve this definitively in minutes — and, per pointer-neighborhood clustering already observed, would likely also resolve several of the other 25 unidentified classes at once, consistent with the <code class="inline">BP_&lt;Mineral&gt;_Spawner</code> / <code class="inline">BP_&lt;Mineral&gt;_Pickup_[A/B]_Spawner</code> / <code class="inline">BP_&lt;Mineral&gt;_Component</code> sibling-actor pattern found via string search in a prior session.</p>
+    </section>
+
+    <section id="disciplines">
+      <span class="eyebrow">Section 11</span>
+      <h2>Per-discipline assessment</h2>
+      <p>Each subsection below is written to be readable independently by the discipline it names.</p>
+
+      <h3 id="d-security">11.1 Security architecture</h3>
+      <p><strong>Threat model.</strong> The tool requires root-equivalent access to open <code class="inline">/proc/&lt;pid&gt;/mem</code> for a process it does not own. It performs <strong>reads only</strong> — no code in this repository writes to the target process's memory, calls <code class="inline">ptrace(PTRACE_POKE*)</code>, or otherwise mutates target-process state. This was a design constraint stated before any code was written and holds throughout: the only I/O primitive used is <code class="inline">io.ReaderAt.ReadAt</code>.</p>
+      <p><strong>Deployment model.</strong> A manual/scheduled host job, invoked over SSH, runs once, exits — explicitly <strong>not</strong> a continuous privileged sidecar container, matching a design constraint carried over from a prior security audit that rated <code class="inline">hostPID</code> + Docker-socket access as a near-trivial path to host root if compromised. This tool has neither.</p>
+      <p><strong>Secrets handling.</strong> The tool's own output contains no secrets — actor positions and raw memory addresses have no value outside a live debugging session against this exact process instance (ASLR re-randomizes addresses on every restart).</p>
+      <div class="callout callout--finding">
+        <span class="callout-label">⚠ Unrelated finding — flagged for awareness</span>
+        <p>While gathering the target PID via <code class="inline">ps aux</code>, the game server's <code class="inline">ServiceAuthToken</code> (a JWT, passed as a plaintext CLI argument in <code class="inline">run-server.sh</code>) was visible in full in process listing output, on every server-launch command line. <strong>This is a pre-existing condition unrelated to dune-resource-scanner</strong> — this tool did not create it and does not interact with it — but it matches this organization's own Requirement 24 ("secrets must not appear in logs, stdout, stderr, or process listings"). Not remediated as part of this investigation (out of scope); the token value itself is redacted from this report.</p>
+      </div>
+
+      <h3 id="d-grc">11.2 GRC / compliance</h3>
+      <p><strong>Evidence trail.</strong> This report, plus <code class="inline">CONTINUATION.md</code> and <code class="inline">findings/2026-08-21-base-island-survey.json</code>, constitute the durable evidence artifacts for this investigation. Every commit in Appendix A is independently reviewable; every PR ran CI before merge (§4.3).</p>
+      <div class="callout callout--finding">
+        <span class="callout-label">Self-identified process defect</span>
+        <p>Issue #1 auto-closed on PR #2's merge because that PR's body contained the literal GitHub auto-close phrase "Closes #1" — despite the same sentence stating the issue should stay open pending live verification. GitHub's auto-linking does not parse qualifying language. Found while assembling this report, not by external review — <strong>reopened with an explanatory comment the same session it was found.</strong></p>
+      </div>
+      <p><strong>Risk classification.</strong> Every PR in this investigation stated an explicit risk classification (Low, in every case — read-only tool, no live-system state changes).</p>
+      <p><strong>CI/branch discipline.</strong> All commits went through issue/branch/PR/CI/merge; none pushed directly to <code class="inline">main</code>. Branch protection requires all 4 CI checks plus blocks force-push and branch deletion.</p>
+
+      <h3 id="d-dba">11.3 Database administration</h3>
+      <p><strong>Access pattern.</strong> All database interaction used <code class="inline">dune database sql "&lt;query&gt;"</code>. <strong>Recommended follow-up:</strong> confirm this wrapper connects with a role that has no <code class="inline">INSERT</code>/<code class="inline">UPDATE</code>/<code class="inline">DELETE</code>/DDL grants, matching this organization's stated convention of a scoped read-only role.</p>
+      <p><strong>Queries executed</strong> (all read-only <code class="inline">SELECT</code>s):</p>
+      <ul>
+        <li><span class="mono">SELECT id, map, name, dimension_index FROM dune.actor_spawners WHERE map = 'DeepDesert' ...</span></li>
+        <li><span class="mono">SELECT entity_id, components FROM dune.fgl_entities LIMIT 3</span> + a <span class="mono">jsonb_object_keys(...)</span> distinct-key enumeration</li>
+        <li>Standard schema introspection (<code class="inline">dune database tables</code>, <code class="inline">columns</code>)</li>
+      </ul>
+      <p><strong>No schema or data changes were made</strong> — no migration, <code class="inline">INSERT</code>/<code class="inline">UPDATE</code>/<code class="inline">DELETE</code>, or DDL of any kind.</p>
+      <p><strong>Schema finding of general interest:</strong> <code class="inline">dune.fgl_entities</code> is a genuine ECS-pattern table (jsonb component bag) that DBA/architecture reviewers may not be aware of if primary schema documentation predates its introduction.</p>
+
+      <h3 id="d-arch">11.4 Software architecture</h3>
+      <p>Design decisions and rationale are documented inline in §4.1 (language choice), §5.4 (two-pass algorithm), and above (deployment model: no sidecar, read-only, manual invocation).</p>
+      <p><strong>Blast radius.</strong> Zero blast radius on the live game server beyond the CPU/memory cost of the scan itself (40s–2m20s observed per run). It does not modify game state, does not restart or signal the target process, and holds no lock or resource the server needs.</p>
+      <p><strong>Algorithmic complexity</strong>, before/after the Bug 2 fix: the original <code class="inline">scanProximity</code> was <span class="mono">O(hits × heap_size)</span> — for a ~16.7–20GB heap and a wide-tolerance survey expected to find dozens of hits, this would re-read hundreds of gigabytes to terabytes per invocation. The fixed implementation is <span class="mono">O(2 × heap_size)</span>, independent of hit count — confirmed by wall-clock time staying roughly constant (2m04s–2m34s) across scans finding between 15 and 533 actors.</p>
+
+      <h3 id="d-qa">11.5 QA / test</h3>
+      <ul>
+        <li>41 tests across 5 files, all in <code class="inline">internal/memscan</code> (the package with all non-trivial logic).</li>
+        <li>89.2% statement coverage of <code class="inline">internal/memscan</code>. <code class="inline">cmd/dune-resource-scanner</code> has 0% coverage <strong>by design</strong> (§4.2) — a stated, reviewed exception, not an oversight.</li>
+        <li>Every test written and confirmed failing before the corresponding implementation code existed.</li>
+        <li>Real command output was captured and checked at every stage of live verification — no claim in this report is asserted without a command/output pair backing it.</li>
+      </ul>
+      <p><strong>Recommended follow-up:</strong> <code class="inline">parseSeeds</code>/<code class="inline">parseNear</code> in <code class="inline">main.go</code> are simple but currently untested; a future session could add targeted unit tests for these two functions without violating the "thin glue" scoping of the rest of that file.</p>
+
+      <h3 id="d-net">11.6 Network</h3>
+      <p>This tool opens <strong>no network listeners</strong> and makes <strong>no outbound network connections</strong> of its own — all interaction is local (<code class="inline">/proc/&lt;pid&gt;/mem</code>, <code class="inline">/proc/&lt;pid&gt;/maps</code> on the same host) or via the pre-existing SSH channel used to invoke it. No new ingress or egress path, port, or DNS dependency. Not applicable beyond this note.</p>
+    </section>
+
+    <section id="recommendations">
+      <span class="eyebrow">Section 12</span>
+      <h2>Open questions &amp; recommendations</h2>
+      <ol>
+        <li><strong>Resolve the Titanium Ore candidate's identity</strong> — recommended: a single in-game visual check (§10), not further memory-forensics guessing.</li>
+        <li><strong>Identify the remaining 25 unidentified classes</strong> — likely tractable in one pass once #1 is resolved, via pointer-neighborhood clustering.</li>
+        <li><strong>DBA follow-up:</strong> confirm the Postgres role used by <code class="inline">dune database sql</code> is genuinely read-only-scoped (§11.3).</li>
+        <li><strong>Security follow-up</strong> (out of scope for this repo, flagged for awareness): the <code class="inline">ServiceAuthToken</code>-in-process-args exposure (§11.1) should be triaged by whoever owns the server-launch tooling.</li>
+        <li><strong>QA follow-up:</strong> consider unit-testing <code class="inline">parseSeeds</code>/<code class="inline">parseNear</code> — low cost, closes a minor coverage gap.</li>
+        <li>Once identity resolution covers a meaningful subset of resource types, design and implement the Live Map integration in <code class="inline">dune-awakening-selfhost-docker</code> per the design constraints already recorded in <code class="inline">CONTINUATION.md</code>.</li>
+      </ol>
+    </section>
+
+    <section id="appendix-a">
+      <span class="eyebrow">Appendix A</span>
+      <h2>Commit / PR / issue reference</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Ref</th><th>Title</th><th>Merged</th><th>Type</th></tr></thead>
+          <tbody>
+            <tr><td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/issues/1">#1</a></td><td class="wrap">v1: core memory-scanning capability</td><td class="wrap">reopened 2026-08-22, §11.2</td><td>Issue</td></tr>
+            <tr><td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/2">#2</a></td><td class="wrap">v1: core memory-scanning capability</td><td class="mono">2026-08-21T23:41Z</td><td>PR</td></tr>
+            <tr><td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/6">#6</a></td><td class="wrap">fix: scan all anonymous rw regions</td><td class="mono">2026-08-21T23:53Z</td><td>PR — Bug 1</td></tr>
+            <tr><td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/7">#7</a></td><td class="wrap">perf: two-pass streaming proximity scan</td><td class="mono">2026-08-21T23:56Z</td><td>PR — Bug 2</td></tr>
+            <tr><td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/8">#8</a></td><td class="wrap">fix: validate vtable against whole main module</td><td class="mono">2026-08-22T00:03Z</td><td>PR — Bug 3</td></tr>
+            <tr><td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/9">#9</a></td><td class="wrap">feat: expose ClassPrivate on ActorInfo</td><td class="mono">2026-08-22T00:12Z</td><td>PR — Bug 4</td></tr>
+            <tr><td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/10">#10</a></td><td class="wrap">docs: session 2 island-survey findings</td><td class="mono">2026-08-22T00:25Z</td><td>PR</td></tr>
+            <tr><td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/pull/11">#11</a></td><td class="wrap">docs: correct island-survey findings</td><td class="mono">2026-08-22T00:38Z</td><td>PR — §8.2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Repository HEAD at time of writing: <span class="mono">077bf9c2250c0f437e3b0b03c93ca8ff719f93b0</span></p>
+    </section>
+
+    <section id="appendix-b">
+      <span class="eyebrow">Appendix B</span>
+      <h2>Glossary</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">UObject</td><td class="wrap">Unreal Engine's universal base class for engine/game objects</td></tr>
+            <tr><td class="mono">AActor</td><td class="wrap">Unreal Engine's base class for anything placeable in the game world</td></tr>
+            <tr><td class="mono">UClass</td><td class="wrap">Unreal Engine's runtime representation of a class's type information (reflection)</td></tr>
+            <tr><td class="mono">vtable</td><td class="wrap">Virtual function table — a pointer-to-function array every polymorphic C++ object begins with</td></tr>
+            <tr><td class="mono">FName</td><td class="wrap">Unreal Engine's interned-string type; stores an index into a global name pool, not raw text</td></tr>
+            <tr><td class="mono">ASLR</td><td class="wrap">Address Space Layout Randomization — why addresses differ between process restarts</td></tr>
+            <tr><td class="mono">RootComponent</td><td class="wrap">An AActor's primary scene component, holding its world transform</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="appendix-c">
+      <span class="eyebrow">Appendix C</span>
+      <h2>Reproduction</h2>
+      <div class="code-wrap"><pre><span class="c"># Cross-compile</span>
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dune-resource-scanner ./cmd/dune-resource-scanner
+
+<span class="c"># Deploy</span>
+scp dune-resource-scanner dune-dev:/tmp/dune-resource-scanner
+
+<span class="c"># Seed-mode scan (known DB-tracked values)</span>
+ssh dune-dev "sudo /tmp/dune-resource-scanner -pid &lt;PID&gt; -mode seed \
+  -seeds spice-small=5000,spice-medium=150000,spice-large=2500000,mystery=60000"
+
+<span class="c"># Proximity scan (no prior knowledge required)</span>
+ssh dune-dev "sudo /tmp/dune-resource-scanner -pid &lt;PID&gt; -mode proximity \
+  -near=&lt;baseX&gt;,&lt;baseY&gt; -tolerance 50000"</pre></div>
+      <p>Find the current DeepDesert PID with <span class="mono">ps aux | grep -i 'DuneSandboxServer.*DeepDesert'</span> — it changes across server restarts.</p>
+    </section>
+
+    <footer class="doc-footer">
+      Full source, tests, and commit history: <a href="https://github.com/Project-Arrakis/dune-resource-scanner">github.com/Project-Arrakis/dune-resource-scanner</a> · Companion markdown copy: <span class="mono">findings/2026-08-22-technical-findings-report.md</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  var toggle = document.getElementById('tocToggle');
+  var nav = document.getElementById('tocNav');
+  var scrim = document.getElementById('tocScrim');
+
+  function closeNav() {
+    nav.classList.remove('open');
+    scrim.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  function openNav() {
+    nav.classList.add('open');
+    scrim.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
+  }
+  toggle.addEventListener('click', function () {
+    nav.classList.contains('open') ? closeNav() : openNav();
+  });
+  scrim.addEventListener('click', closeNav);
+  nav.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      if (window.matchMedia('(max-width: 920px)').matches) closeNav();
+    });
+  });
+
+  var links = Array.prototype.slice.call(nav.querySelectorAll('a[href^="#"]'));
+  var targets = links
+    .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+    .filter(Boolean);
+
+  if ('IntersectionObserver' in window && targets.length) {
+    var current = null;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          var id = entry.target.id;
+          links.forEach(function (a) {
+            a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+          });
+        }
+      });
+    }, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+    targets.forEach(function (t) { io.observe(t); });
+  }
+})();
+</script>
