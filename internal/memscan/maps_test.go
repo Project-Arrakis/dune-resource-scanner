@@ -73,6 +73,41 @@ func TestRegion_Contains(t *testing.T) {
 	}
 }
 
+// MainModuleRegions must cover every segment of the main binary's image
+// (text, rodata, data), not just the executable-permission one -- confirmed
+// live against dune-dev: a vtable pointer can land in the r--p rodata
+// segment (where UE's relocated vtables/RTTI actually live), not only the
+// r-xp text segment. Checking only the exec-permission region rejected
+// every real actor during the first live test.
+func TestMainModuleRegions_ReturnsAllSegmentsOfTheMainExecutable(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	main := MainModuleRegions(regions)
+	if len(main) != 2 {
+		t.Fatalf("expected 2 segments (r-xp text + r--p rodata) of the main binary, got %d: %+v", len(main), main)
+	}
+	for _, r := range main {
+		if r.Pathname != "/home/dune/DeepDesertServer" {
+			t.Fatalf("unexpected region in main module: %+v", r)
+		}
+	}
+}
+
+func TestMainModuleRegions_ExcludesOtherFiles(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	main := MainModuleRegions(regions)
+	for _, r := range main {
+		if r.Pathname == "/usr/lib/libc.so.6" {
+			t.Fatal("expected an unrelated shared library to be excluded")
+		}
+	}
+}
+
 func TestFilterExecutable_ReturnsOnlyExecRegions(t *testing.T) {
 	regions, err := ParseMaps(newMapsReader())
 	if err != nil {
@@ -98,5 +133,70 @@ func TestFilterByPathname_ReturnsMatchingRegions(t *testing.T) {
 	}
 	if heap[0].Start != 0x7f0a00000000 {
 		t.Fatalf("unexpected heap region start: %#x", heap[0].Start)
+	}
+}
+
+// HeapLikeRegions must cover both the classic glibc [heap] AND every
+// anonymous read-write mapping, because a game engine with its own
+// allocator (confirmed live against dune-dev: [heap] was ~3MB while the
+// actual game-object allocations live in dozens of large anonymous rw
+// mmap regions up to 4GB each) puts real actor data outside [heap] entirely.
+func TestHeapLikeRegions_IncludesNamedHeap(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	heapLike := HeapLikeRegions(regions)
+	found := false
+	for _, r := range heapLike {
+		if r.Pathname == "[heap]" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected [heap] region to be included")
+	}
+}
+
+func TestHeapLikeRegions_IncludesAnonymousRWRegions(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	heapLike := HeapLikeRegions(regions)
+	found := false
+	for _, r := range heapLike {
+		if r.Start == 0x7f0a30000000 {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected the anonymous rw region to be included")
+	}
+}
+
+func TestHeapLikeRegions_ExcludesFileBackedRegions(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	heapLike := HeapLikeRegions(regions)
+	for _, r := range heapLike {
+		if r.Pathname != "" && r.Pathname != "[heap]" {
+			t.Fatalf("expected no file-backed regions, found %+v", r)
+		}
+	}
+}
+
+func TestHeapLikeRegions_ExcludesReadOnlyRegions(t *testing.T) {
+	regions, err := ParseMaps(newMapsReader())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	heapLike := HeapLikeRegions(regions)
+	for _, r := range heapLike {
+		if len(r.Perms) < 2 || r.Perms[1] != 'w' {
+			t.Fatalf("expected only writable regions, found %+v", r)
+		}
 	}
 }

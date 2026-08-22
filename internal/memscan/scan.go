@@ -51,3 +51,25 @@ func FindPointerReferences(buf []byte, baseAddr uint64, target uint64) []uint64 
 	}
 	return hits
 }
+
+// PointerRef is one 8-byte-aligned occurrence of a pointer value found by
+// FindPointerReferencesMulti.
+type PointerRef struct {
+	Addr   uint64 // absolute address of the reference itself
+	Target uint64 // the target pointer value found there
+}
+
+// FindPointerReferencesMulti scans buf once for 8-byte-aligned occurrences
+// of any value in targets, as raw little-endian uint64 pointer values. This
+// lets a caller search for many target addresses in a single pass over a
+// large region, instead of one pass per target.
+func FindPointerReferencesMulti(buf []byte, baseAddr uint64, targets map[uint64]bool) []PointerRef {
+	var refs []PointerRef
+	for off := 0; off+8 <= len(buf); off += 8 {
+		v := binary.LittleEndian.Uint64(buf[off : off+8])
+		if targets[v] {
+			refs = append(refs, PointerRef{Addr: baseAddr + uint64(off), Target: v})
+		}
+	}
+	return refs
+}

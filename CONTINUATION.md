@@ -8,19 +8,163 @@ second resource + ore/stone/fiber types), then integrate them into the Live Map 
 contradicting some stale references elsewhere). Currently mid-build on a permanent Go tool,
 `dune-resource-scanner`, to replace a Python prototype that hit a real performance wall.
 
-## Immediate next step (where this session stopped)
-- Just created `~/projects/repos/dune-resource-scanner` (git initialized, branch `master` not
-  yet renamed to `main`), moved there after starting it in `/tmp` scratchpad by mistake — the
-  user correctly flagged both "why /tmp" (this is permanent, not disposable) and "this should be
-  a repo under Project-Arrakis" (matching this workstream's convention: repos live flat under
-  `~/projects/repos/`, get a real GitHub repo, `CHANGELOG.md`, GitHub Issues, added to the
-  Project Arrakis board).
-- **Not yet decided**: which GitHub org to push to. Two conventions coexist in this ecosystem —
-  `dune-awakening-selfhost-docker` → `Project-Arrakis` org, `r740-dune-deployment-kit` →
-  personal `yacketrj`. Ask the user before creating the real GitHub repo.
-- **No Go source written yet** — only `go mod init dune-resource-scanner` ran. Go 1.24.4 is
-  available locally on this machine; NOT installed on `dune-dev` — doesn't matter, cross-compile
-  locally (`GOOS=linux GOARCH=amd64 go build`) and `scp` the static binary over.
+## Session 2 update (2026-08-21, later same day) — v1 core implementation shipped
+- Repo created for real: **`Project-Arrakis/dune-resource-scanner`, private** (user confirmed
+  this org/visibility explicitly this session). `origin` on the local clone already points at
+  it; `main` branch (not `master`).
+- **`internal/memscan` fully implemented via TDD** (18 tests, all green): `maps.go` (`/proc/<pid>/maps`
+  parsing + `Region`/`FilterExecutable`/`FilterByPathname`), `validate.go` (`ValidTransform` —
+  NaN/out-of-world/exact-origin rejection), `scan.go` (`FindInt32LE` seeded scan, `FindNearbyXY`
+  proximity scan, `FindPointerReferences` backward pointer resolution), `actor.go`
+  (`ValidateActor` — the full vtable/ClassPrivate/RootComponent/Transform chain, tested against a
+  fake in-memory `MemReader`, no live process needed), `procmem.go` (`ProcMem` implementing
+  `MemReader` over any `io.ReaderAt`, `ReadRegion` helper). All clean-room, matches the design in
+  "What the Go tool needs to do" below exactly — never read the Python prototype's source.
+- **`cmd/dune-resource-scanner/main.go`**: CLI wiring, `-mode seed|proximity`, `-seeds
+  label=value,...`, `-near x,y`, `-tolerance`, JSON output (`label`/`value`/position/etc.).
+  Deliberately scoped as untested "thin glue" (declared as such in issue #1 before writing it) —
+  verify this manually against `dune-dev`, don't assume it's correct from the tests alone.
+- **CI wired and verified green**, both on the PR and on `main` post-merge (Requirement 1/11):
+  `go build`/`go vet`/`gofmt`/`go test -race -cover`, plus `Project-Arrakis/.github`'s
+  `reusable-security-scan.yml@main` (gitleaks/semgrep/trivy — confirmed merged to that repo's
+  `main` this session, superseding the "still unmerged" note that used to be in the meta README).
+  Branch protection on `main` requires all four checks + no force-push/deletion. Dependabot
+  (gomod + github-actions) enabled.
+- gitleaks/semgrep/trivy all ran clean **locally** before every commit, not just in CI.
+- **Cross-compiled successfully**: `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build` produces a
+  static ELF binary, `-help` output confirms flags wire up correctly. **Not yet copied to or run
+  against `dune-dev`** — that's the actual next step, see below.
+- Issue #1 tracks this work and is **intentionally still open** — it covers live verification
+  too, not just the code landing. PR #2 (merged) says as much in its body.
+- Also fixed, same session: a stale claim in the `meta` README saying `Project-Arrakis/.github`
+  PR #1 (the shared security-scan workflow) was still unmerged and every adopting repo pointed
+  at the source branch as a workaround — both were false by the time this was checked (PR #1
+  merged 2026-08-21T22:11:45Z, and all 7 adopting repos, verified directly via the GitHub API,
+  already reference `@main`). Requirement 14 fix, pushed directly to `meta`'s `main` per that
+  repo's own small-doc-change exception.
+
+## Session 2, part 2 (same day) — live-tested against dune-dev, island survey done
+
+The Go tool went through 4 real bugs found and fixed live against dune-dev's DeepDesert
+server (PID 3693040 at the time, will differ next time — find fresh via `ps aux | grep -i
+DuneSandboxServer.*DeepDesert`), each fixed via TDD, verified with a standalone Python
+diagnostic against real memory *before* trusting the Go rewrite, then shipped through the
+normal branch/PR/CI/merge cycle (issues #1, PRs #6/#7/#8/#9 — see repo history):
+
+1. **`[heap]` alone is ~3MB; real allocations live in dozens of anonymous rw mmap regions up
+   to 4GB each** (~16-20GB total, confirmed via `/proc/<pid>/maps`). Fixed:
+   `memscan.HeapLikeRegions` — `[heap]` plus every anonymous writable region.
+2. **`scanProximity`'s original one-scan-per-hit design was O(hits × heap size)** — fine for
+   one point, catastrophic for a wide island survey. Fixed: `memscan.FindPointerReferencesMulti`
+   + a rewritten `scanProximity` that does exactly two streaming heap passes total, independent
+   of hit count.
+3. **The vtable-validity check only matched the executable-permission (`r-xp`) segment of the
+   main binary, but relocated vtables/RTTI live in its separate `r--p` rodata segment** —
+   confirmed directly (`sudo grep DuneSandboxServer-Linux-Shipping /proc/<pid>/maps` shows 3
+   segments: r-xp text, r--p rodata, rw-p data, at 3 different address ranges). This was the
+   root cause of the first live run validating **zero** actors out of 2606 raw byte-pattern
+   hits, despite the pattern search itself being correct (independently re-verified with a raw
+   Python count: 2606 aligned hits for `int32(5000)` existed all along). Fixed:
+   `memscan.MainModuleRegions` — every segment sharing the main executable's backing file,
+   regardless of permission bits.
+4. **`ActorInfo` never exposed `ClassPrivate`**, needed to group found actors by real class once
+   position alone wasn't enough to distinguish resource-node types from base-building parts.
+   Added it — it was already being read during validation, just never returned.
+
+**Seed mode is now fully live-validated**: `spice-small=281, spice-medium=89, spice-large=6,
+mystery=533`. The `mystery=533` figure is an exact match to the "533-position pool" the prior
+session found via a completely different method (DB query), independently confirming both the
+Go rewrite's correctness and that session's finding.
+
+**Proximity mode found the base island's actor layout — and the tool's identification was
+independently proven correct against known ground truth, but full identity resolution for
+unknown classes hit a genuine, honestly-reported wall.** `FindNearbyXY`'s `tolerance` is a
+per-axis box half-width, not a Euclidean radius (`-tolerance 50000` means a
+100,000×100,000-unit search box centered on `-near`, not a 50,000-unit-radius circle) — keep
+this in mind when picking a value.
+
+**Ground-truth validation (the important, solid result):** re-running seed mode with the
+now-current binary (after `ClassPrivate` was added) gave the *actual* class pointers for the
+100%-DB-confirmed classes: `spice-small=0x75c26017b270`, `spice-medium=0x75c25f246970`,
+`spice-large=0x75c236912500`, `mystery=0x75c25f247290`. Cross-checking these against the wide
+proximity scan's class groups found **exact address matches** for `spice-small` and `mystery`
+among the "natural-looking" clusters the scan had already flagged — independent proof that
+proximity-scan + `ClassPrivate`-clustering correctly identifies real, distinct actor classes.
+This is the strongest evidence yet that the whole tool (maps parsing, actor validation, class
+grouping) is sound.
+
+**A methodological correction, found and fixed by testing the assumption, not by trusting it:**
+an earlier version of this section flagged several large classes (34-75 members) as "almost
+certainly base-building components" because some instances had `Z` exactly `0.0`. Re-checked
+directly: those classes' *closest* member to the base is 11,000+ units away — far outside any
+plausible building footprint — which falsifies that claim outright (a real base-building class,
+separately confirmed via a genuinely tight `-tolerance 3000` scan, has ~13 distinct classes each
+with only 1-2 members, none overlapping the large classes at all). The `Z=0.0` instances are
+more likely depleted/respawning resource nodes reset to a default transform, not proof of
+anything about their real nature. **Lesson for whoever picks this up next: don't trust a
+classification heuristic that hasn't been checked against its own stated claim (here, "tightly
+bound to the base's footprint" was asserted without ever computing the actual minimum
+distance) — this is exactly the kind of unverified claim Requirement 12 exists to catch, applied
+to a live investigation instead of a doc.**
+
+**Honest current state: 2 of ~28 distinct classes near the island are proven-identified (spice,
+mystery); the rest are NOT.** After excluding the 4 known spice/mystery class pointers, **26
+distinct classes with 3+ members remain unidentified** near the base's island (full data:
+`findings/2026-08-21-base-island-survey.json` in this repo — positions, counts, class pointers
+for all of them). The single strongest remaining candidate is still `ClassPrivate
+0x75c268f7ade0` — 28 members within a clean, isolated distance band (8,166-48,680 units, then an
+~18,500-unit gap before the next group at 67k+, i.e. other islands) matching the user's "at
+least 20, if not more" Titanium Ore count and showing natural (non-grid) spatial/elevation
+spread — but this is still circumstantial, not proven. **A real, bounded attempt was made to go
+further and definitively resolve identity:**
+- Checked `dune database tables` for anything that might track ore-node positions/types
+  server-side: `actor_spawners` (only PlayerStart/encounter spawners, not resource nodes) and
+  `fgl_entities` (a real per-entity JSONB component store, but only for player-persisted objects
+  — bases, vehicles, characters; only 1175 rows total, no resource-node components at all).
+  Neither helps — confirms the prior session's finding that ore-type resources genuinely have
+  zero server-side tracking, memory scanning is the only path to their positions.
+- Considered resolving the UClass's real name from its `ClassPrivate` pointer (UE's
+  FName/global-name-table format) — **deliberately not attempted**: this requires guessing
+  multiple unknown, version-specific implementation details (the `UObject::NamePrivate` field
+  offset, the `FNamePool` block/offset encoding scheme) with no way to verify a guess is correct
+  against ground truth we don't have, meaning a wrong guess would produce a *confidently wrong*
+  identification — strictly worse than the current, honestly-labeled "unconfirmed candidate."
+  This is a real R&D task for a future session with more time to spend verifying each assumption
+  empirically, not something to rush.
+
+**The reliable, fast path to full identification is still a short in-game visual check** — the
+closest Titanium candidate is only ~8,166 units from the base (X=-612311.21, Y=-708329.60,
+Z=4396.67). Once even one class is visually confirmed, the same seed/proximity + class-pointer
+methodology already proven against spice/mystery can immediately attach a real name to it and,
+from there, likely several of the remaining 25 classes at once (many share a pointer-neighborhood
+prefix with the Titanium candidate — e.g. `0x75c268f76xxx`/`f73xxx`/`f74xxx`/`f71xxx`/`f7cxxx` —
+suggesting they're sibling actor roles of the *same* resource family, spawner/pickup/component,
+per the `BP_<Mineral>_Spawner`/`BP_<Mineral>_Pickup_[A/B]_Spawner`/`BP_<Mineral>_Component`
+pattern found in session 1 — not 25 independent resource types).
+
+## Immediate next step for the next session
+1. **Get one real identity confirmation** — walk to the closest Titanium candidate (8166 units
+   from base) and visually confirm, or pick any other listed position and confirm whatever it
+   actually is. One confirmed class pointer, cross-referenced by pointer-prefix family against
+   `findings/2026-08-21-base-island-survey.json`, likely resolves several of the 26 unidentified
+   classes at once (see the sibling-actor-role reasoning above).
+2. If pursuing FName resolution instead of a visual check: don't guess offsets/encoding blind.
+   Start by finding a way to verify each assumption against something already known (e.g., can
+   the `UObject::NamePrivate` field be found empirically by testing candidate offsets on the
+   *known* spice-small class pointer, `0x75c26017b270`, and checking whether the decoded name
+   plausibly contains "Spice"?) before trusting any result for an unknown class.
+3. Keep trying to catch a `field_kind_id=0` (`mystery`) field while active for in-person ID —
+   the seed-mode scan already gives live positions for all 533, so this is now much easier than
+   session 1's approach (teleport is still unreliable; give the closest live position to
+   wherever the player already is).
+4. Once enough positions + names are solid, design and implement the real Live Map integration
+   in `dune-awakening-selfhost-docker` (new branch, new `console/api` route reading the
+   scanner's output, new marker/layer type with an `overlays`-based freshness indicator per the
+   design constraints below).
+- Go 1.24.4 is available locally on this machine; NOT installed on `dune-dev` — doesn't matter,
+  cross-compile locally (`GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build`) and `scp` the static
+  binary over (`/tmp/dune-resource-scanner` on dune-dev — not persisted anywhere, redeploy after
+  every `main` change).
 
 ## Why Go, why not the Python prototype
 A third-party zip (`dune-spice-tools`) was reviewed, deeply audited (Layer-1 eight-hats design
