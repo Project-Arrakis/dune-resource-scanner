@@ -26,9 +26,10 @@ var DefaultOffsets = Offsets{
 
 // ActorInfo is the result of a successfully validated actor.
 type ActorInfo struct {
-	Addr      uint64
-	X, Y, Z   float64
-	BaseValue int32
+	Addr         uint64
+	X, Y, Z      float64
+	BaseValue    int32
+	ClassPrivate uint64 // the actor's UClass pointer -- identical across all instances of the same class
 }
 
 // ValidateActor checks whether addr points to a real actor matching the
@@ -80,5 +81,5 @@ func ValidateActor(mem MemReader, addr uint64, off Offsets, isExe, isHeap func(u
 		return ActorInfo{}, false
 	}
 
-	return ActorInfo{Addr: addr, X: x, Y: y, Z: z, BaseValue: baseValue}, true
+	return ActorInfo{Addr: addr, X: x, Y: y, Z: z, BaseValue: baseValue, ClassPrivate: classPrivate}, true
 }
