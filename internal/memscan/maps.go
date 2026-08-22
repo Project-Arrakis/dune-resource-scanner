@@ -83,3 +83,45 @@ func FilterByPathname(regions []Region, name string) []Region {
 	}
 	return out
 }
+
+// MainModuleRegions returns every region sharing the same backing file as
+// the process's main executable image -- text, rodata, and data segments
+// are all part of one module, and a vtable pointer can land in any of them
+// (relocated vtables/RTTI commonly live in the read-only rodata segment,
+// not the executable-permission text segment), so validating a vtable
+// pointer against only the exec-permission region misses real vtables.
+// The main executable is identified as the first region with execute
+// permission and a backing file.
+func MainModuleRegions(regions []Region) []Region {
+	var mainPath string
+	for _, r := range regions {
+		if len(r.Perms) >= 3 && r.Perms[2] == 'x' && r.Pathname != "" {
+			mainPath = r.Pathname
+			break
+		}
+	}
+	if mainPath == "" {
+		return nil
+	}
+	return FilterByPathname(regions, mainPath)
+}
+
+// HeapLikeRegions returns every region that could hold heap-allocated
+// objects: the classic glibc [heap], plus every anonymous (no backing file)
+// writable mapping. Engines with their own allocator (confirmed live
+// against the Dune Awakening server: [heap] is only a few MB, while real
+// game-object allocations live in dozens of large anonymous rw mmap
+// regions) put real actor data outside [heap] entirely, so scanning
+// [heap] alone misses almost everything.
+func HeapLikeRegions(regions []Region) []Region {
+	var out []Region
+	for _, r := range regions {
+		if len(r.Perms) < 2 || r.Perms[1] != 'w' {
+			continue
+		}
+		if r.Pathname == "[heap]" || r.Pathname == "" {
+			out = append(out, r)
+		}
+	}
+	return out
+}
