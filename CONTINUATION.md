@@ -43,26 +43,114 @@ contradicting some stale references elsewhere). Currently mid-build on a permane
   already reference `@main`). Requirement 14 fix, pushed directly to `meta`'s `main` per that
   repo's own small-doc-change exception.
 
-## Immediate next step (where this session stopped)
-- **Copy the cross-compiled binary to `dune-dev` and run it for real** against the live
-  `DeepDesertServer` process. Nothing below this point has been live-tested yet — the Go
-  implementation is unit-tested and compiles, but has never touched a real `/proc/<pid>/mem`.
-  Expect the first live run to surface at least one real bug (offset math, alignment assumption,
-  a heap region that's bigger/differently-laid-out than assumed) — this is normal, don't treat
-  the design above as gospel until it's actually validated live.
-- Concretely: `ssh dune-dev`, find the game server's PID, `scp` the binary over,
-  `sudo ./dune-resource-scanner -pid <pid> -mode seed -seeds spice-small=5000,spice-medium=150000,spice-large=2500000,mystery=60000`
-  as the first smoke test (this reuses the *already-confirmed-working* seed values from the
-  Python prototype, so a failure here means a bug in the Go rewrite, not new unknown territory).
-  Remember: **check `ps aux | grep dune-resource-scanner` on dune-dev and clean up if a run hangs
-  or times out** (the local-ssh-timeout-doesn't-kill-remote-process lesson from session 1, still
-  applies).
-- Only after seed mode is confirmed working live, move on to the new proximity-scan capability
-  (anchored on the confirmed base position, X=-611736.35, Y=-700183.46) — that's genuinely new,
-  untested-against-reality code, more likely to need iteration.
-- **No Go source written yet** — only `go mod init dune-resource-scanner` ran. Go 1.24.4 is
-  available locally on this machine; NOT installed on `dune-dev` — doesn't matter, cross-compile
-  locally (`GOOS=linux GOARCH=amd64 go build`) and `scp` the static binary over.
+## Session 2, part 2 (same day) — live-tested against dune-dev, island survey done
+
+The Go tool went through 4 real bugs found and fixed live against dune-dev's DeepDesert
+server (PID 3693040 at the time, will differ next time — find fresh via `ps aux | grep -i
+DuneSandboxServer.*DeepDesert`), each fixed via TDD, verified with a standalone Python
+diagnostic against real memory *before* trusting the Go rewrite, then shipped through the
+normal branch/PR/CI/merge cycle (issues #1, PRs #6/#7/#8/#9 — see repo history):
+
+1. **`[heap]` alone is ~3MB; real allocations live in dozens of anonymous rw mmap regions up
+   to 4GB each** (~16-20GB total, confirmed via `/proc/<pid>/maps`). Fixed:
+   `memscan.HeapLikeRegions` — `[heap]` plus every anonymous writable region.
+2. **`scanProximity`'s original one-scan-per-hit design was O(hits × heap size)** — fine for
+   one point, catastrophic for a wide island survey. Fixed: `memscan.FindPointerReferencesMulti`
+   + a rewritten `scanProximity` that does exactly two streaming heap passes total, independent
+   of hit count.
+3. **The vtable-validity check only matched the executable-permission (`r-xp`) segment of the
+   main binary, but relocated vtables/RTTI live in its separate `r--p` rodata segment** —
+   confirmed directly (`sudo grep DuneSandboxServer-Linux-Shipping /proc/<pid>/maps` shows 3
+   segments: r-xp text, r--p rodata, rw-p data, at 3 different address ranges). This was the
+   root cause of the first live run validating **zero** actors out of 2606 raw byte-pattern
+   hits, despite the pattern search itself being correct (independently re-verified with a raw
+   Python count: 2606 aligned hits for `int32(5000)` existed all along). Fixed:
+   `memscan.MainModuleRegions` — every segment sharing the main executable's backing file,
+   regardless of permission bits.
+4. **`ActorInfo` never exposed `ClassPrivate`**, needed to group found actors by real class once
+   position alone wasn't enough to distinguish resource-node types from base-building parts.
+   Added it — it was already being read during validation, just never returned.
+
+**Seed mode is now fully live-validated**: `spice-small=281, spice-medium=89, spice-large=6,
+mystery=533`. The `mystery=533` figure is an exact match to the "533-position pool" the prior
+session found via a completely different method (DB query), independently confirming both the
+Go rewrite's correctness and that session's finding.
+
+**Proximity mode found the base's own island's raw-resource layout.** `FindNearbyXY`'s
+`tolerance` is a per-axis box half-width, not a Euclidean radius (i.e. `-tolerance 50000` means
+a 100,000×100,000 unit search box centered on `-near`, not a 50,000-unit-radius circle) — keep
+this in mind when picking a value. Scanning progressively wider boxes around the base
+(X=-611736.35, Y=-700183.46) and grouping hits by `ClassPrivate` revealed:
+- Several large classes (34/33/16/15 members, `Z` including exactly `0.0` for some instances,
+  tightly bound to the base's own footprint at every tolerance) — almost certainly base-building
+  components (walls/foundations/etc.), not raw resources.
+- **One class (`ClassPrivate 0x75c268f7ade0`) forms a tight group of exactly 20 members within
+  ~48,700 units of the base, followed by a clean ~18,500-unit distance gap before the next
+  members appear** (at 67k-137k units — almost certainly *other* Titanium deposits on entirely
+  different, distant islands, not this one). This 20-member, this-island-only group is the
+  **strongest candidate for the "at least 20, if not more" Titanium Ore nodes** the user
+  described from direct in-game knowledge of this island — count matches exactly, spatial
+  spread is consistent with natural terrain placement (not a tight building grid), `Z` varies
+  naturally (866-4837, real elevation, never a suspicious exact `0.0`), and `BaseValue` is
+  uniformly `0` (expected — ore nodes have no `resourcefield_state`-style tracked value, unlike
+  spice). Full position list saved at the bottom of this section.
+- Several other mid-size classes (25/22/16/14/12/11 members, similarly natural-looking spread)
+  are plausible candidates for the *other* mineral types this island likely also hosts
+  (Bauxite/Azurite/Dolomite/Rhyolite/Impure Fuel/Flour Sand — see the internal-name findings
+  from session 1 below) — **not yet individually identified**, this is the next real task.
+- **Identity (`0x75c268f7ade0` = Titanium specifically, not confirmed by any other means yet)
+  is strong circumstantial evidence, not proof.** Resolving it definitively needs either (a) an
+  in-game visual check — the closest candidate is only ~8,166 units from the base (nearest:
+  X=-612311.21, Y=-708329.60, Z=4396.67), a short trip for whoever's playing `DarkDante` — or
+  (b) resolving the UClass's real name from its `ClassPrivate` pointer in memory, which needs
+  new reverse-engineering (UE's FName/global-name-table format) not yet attempted.
+
+**Candidate Titanium Ore positions (this island only, sorted by distance from base):**
+```
+dist(u)   X            Y            Z
+  8166.4  -612311.21   -708329.60   4396.67
+ 10556.5  -612296.60   -710725.07   4620.71
+ 10930.3  -611898.40   -711112.56   4836.92
+ 14527.5  -608950.03   -714441.26   4525.85
+ 29117.6  -635427.81   -717111.16   1302.05
+ 29843.6  -635612.51   -718087.98   1463.68
+ 30040.1  -582270.73   -706030.34   1865.32
+ 30617.6  -635255.09   -719787.15   1640.30
+ 30757.0  -581666.42   -706647.92   1855.00
+ 31687.9  -580866.06   -707335.38   1155.30
+ 33373.8  -578807.41   -705614.74   2445.00
+ 33911.2  -584812.29   -720800.47   1006.36
+ 34802.9  -639933.52   -720583.52   2277.58
+ 35694.3  -585962.32   -724877.24    866.61
+ 39670.0  -579835.88   -723764.61   1081.72
+ 42157.5  -620542.08   -741411.08   2087.22
+ 42413.3  -623279.90   -740995.63   2107.43
+ 42651.4  -577443.72   -725543.99   1064.25
+ 47866.7  -625103.54   -746145.79   2124.59
+ 48679.5  -627843.01   -746121.14   2160.14
+```
+
+## Immediate next step for the next session
+1. **Get identity confirmation** on `0x75c268f7ade0` — walk to the closest candidate (8166
+   units from base) and visually confirm it's Titanium Ore, or attempt UClass-name resolution
+   from memory (new R&D, no known offset for UObject's FName yet).
+2. **Identify the other mid-size clusters** the same way (25/22/16/14/12/11-member classes found
+   in the same scans) — cross-reference against the session-1 internal-name findings
+   (Bauxite→Aluminum Ore, Azurite→Copper Ore, Dolomite, Rhyolite, ImpureFuel,
+   CompactedFlourSand) once at least one is visually confirmed, to calibrate which class pointer
+   maps to which mineral.
+3. Keep trying to catch a `field_kind_id=0` (`mystery`) field while active for in-person ID —
+   the seed-mode scan already gives live positions for all 533, so this is now much easier than
+   session 1's approach (teleport is still unreliable; give the closest live position to
+   wherever the player already is).
+4. Once enough positions + names are solid, design and implement the real Live Map integration
+   in `dune-awakening-selfhost-docker` (new branch, new `console/api` route reading the
+   scanner's output, new marker/layer type with an `overlays`-based freshness indicator per the
+   design constraints below).
+- Go 1.24.4 is available locally on this machine; NOT installed on `dune-dev` — doesn't matter,
+  cross-compile locally (`GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build`) and `scp` the static
+  binary over (`/tmp/dune-resource-scanner` on dune-dev — not persisted anywhere, redeploy after
+  every `main` change).
 
 ## Why Go, why not the Python prototype
 A third-party zip (`dune-spice-tools`) was reviewed, deeply audited (Layer-1 eight-hats design
