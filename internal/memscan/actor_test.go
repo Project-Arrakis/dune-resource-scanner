@@ -73,6 +73,9 @@ func TestValidateActor_AcceptsRealActor(t *testing.T) {
 	if info.BaseValue != 5000 {
 		t.Errorf("unexpected BaseValue: %d", info.BaseValue)
 	}
+	if info.ClassPrivate != testClassPrivate {
+		t.Errorf("unexpected ClassPrivate: %#x, want %#x", info.ClassPrivate, testClassPrivate)
+	}
 }
 
 func TestValidateActor_RejectsVtableOutsideExe(t *testing.T) {
