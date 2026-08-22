@@ -221,8 +221,50 @@ The mechanic is the **`long_range` boolean column**, not geography:
   visiting. This is why cells the operator has never entered (A-5, A-8) still hold a TaxiService.
 - `long_range = false` (all 527 ore/pickup/scrap/bush rows) — appear only once discovered up close.
 
-There is also an `area_id` column grouping markers into regions (the F-4 area is `area_id=30`,
-the A-2 region is `11`). **Never present `dune.markers` to players as an exhaustive atlas.**
+**Never present `dune.markers` to players as an exhaustive atlas.**
+
+### 5b. `area_id` decodes Deep Desert's prefab layout — and locates Imperial Testing Stations
+
+`dune.markers.area_id` is a **foreign key into `dune.map_names.map_name_id`**, and it reveals that
+Deep Desert is assembled from prefab "content block" islands, roughly one per 9×9 grid cell:
+
+| Cell | `area_id` | Prefab (`map_names`) | Markers |
+|---|---|---|---|
+| F-4 / F-5 | 30 | **ClosedOffTestingStationIsland** | 92 |
+| G-3 | 26 | FallenLight | 180 |
+| A-2 | 11 | HaggaBasin | 175 |
+| D-1 | 17 | ElectricityDungeon | 46 |
+| H-3 | 46 | *(no map_names row)* | 31 |
+| E-4 / F-4 | 41 | *(no map_names row)* | 19 |
+| A-1 | 13 | ErythriteCaveIsland | 1 |
+| A-8 | 2 | WaterFat | 1 |
+| A-5 | 65 | *(no map_names row)* | 1 |
+
+**An Imperial Testing Station is a cell whose prefab is `ClosedOffTestingStationIsland`.**
+Confirmed live: the operator stood inside a testing station and their position resolved to the
+`area_id=30` region, which also contains the only DeepDesert `Ecolab` marker in that area
+(`-201473, -214617`, `area_radius=30000`). In DB terms a station presents as an `Ecolab` marker
+inside an `area_id=30` region.
+
+Testing stations have **no dedicated marker type** — searching all 88 marker types across every
+map returns nothing station-like — and no row in `encounters_static` (empty) or any table/column
+matching `%station%`/`%testing%`/`%facility%`. Only one station is currently discovered; the
+operator reports there should be roughly ten (about four active, the rest present but
+inaccessible), which the discovery mechanic above fully explains.
+
+In memory a station is unmistakable: a scan centred on the operator inside one returned 1,640
+actors in a 120 m box, **1,505 of them underground** (Z ≈ −2,200) across 241 classes. The two
+dominant classes (`0x7cff8a0c1380`, `0x7cff4ab11bc0`) are **generic structural/ruin pieces** also
+found around Shipwreck and Ecolab markers elsewhere, so they identify "a built interior", not a
+station specifically. **Negative Z is the useful detection signal** — ore, spice, flour sand and
+flora all sit at positive Z on terrain, while interiors sit below zero.
+
+Related unexplored lead: `dune.actor_spawners` holds 14 `CB_WreckedShip_Medium_001` entries for
+DeepDesert (10 in `dimension_index=0`, 4 in `dimension_index=1`, the latter a strict subset)
+against only 1 discovered `Shipwreck` marker — so that table may hold a *complete*,
+discovery-independent encounter list. It has no position columns, and its `id` is a small
+sequential integer (not packed coordinates like `field_id`), so positions would have to come from
+elsewhere.
 
 **The architecture this implies — use both sources for what each is good at:**
 the scanner yields *complete* positions but no names; `dune.markers` yields *names* but only where
@@ -251,7 +293,17 @@ engineering unnecessary** — do not spend time on that.
 | `0x7cfc3f390700`, `0x7cfc44d23730` | RhyolitePickup | 0.04 m | 2 |
 | `0x7cfc32810cd0`, `0x7cfc328120b0` | ScrapMetalPart | 0.27 m | 2 |
 | `0x7cfef23bb270`, `0x7cfef23ba030`, `0x7cfef23b2500` | ScrapMetalWreckage | 0.05 m | 3 |
-| `0x7cff4a976b80` | Shipwreck | 0.00 m | 1 |
+| `0x7cff4a976b80` | **generic long-range POI beacon** — *not* a single resource, see below | 0.00 m | 3 |
+
+**Correction, found the same session:** `0x7cff4a976b80` was initially recorded as "Shipwreck" on a
+0.00 m match. That was wrong — a nearest-marker-wins match hid a genuine ambiguity. Enumerating
+all three of its instances shows one sits on a `Shipwreck` marker and **two sit on `Ecolab`
+markers**, all at 0.00 m. It is a class common to `long_range=true` discoverable POIs
+(Shipwreck / Ecolab / Cave), not a resource type. **Lesson for anyone extending the table: check
+every instance of a class against the marker set, not just its single closest match** — a class
+present at several *different* marker types is a generic role, and reporting its best match as an
+identification is exactly the kind of confidently-wrong labelling this whole approach exists to
+avoid.
 
 Pointers are per-process (ASLR) — re-derive them after any restart; the *method* is what carries
 over. Families cluster by memory pool (`0x7cfef432****` = Ore types, `0x7cfef23b****` = Scrap
