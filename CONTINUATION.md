@@ -142,25 +142,167 @@ suggesting they're sibling actor roles of the *same* resource family, spawner/pi
 per the `BP_<Mineral>_Spawner`/`BP_<Mineral>_Pickup_[A/B]_Spawner`/`BP_<Mineral>_Component`
 pattern found in session 1 — not 25 independent resource types).
 
-## Immediate next step for the next session
-1. **Get one real identity confirmation** — walk to the closest Titanium candidate (8166 units
-   from base) and visually confirm, or pick any other listed position and confirm whatever it
-   actually is. One confirmed class pointer, cross-referenced by pointer-prefix family against
-   `findings/2026-08-21-base-island-survey.json`, likely resolves several of the 26 unidentified
-   classes at once (see the sibling-actor-role reasoning above).
-2. If pursuing FName resolution instead of a visual check: don't guess offsets/encoding blind.
-   Start by finding a way to verify each assumption against something already known (e.g., can
-   the `UObject::NamePrivate` field be found empirically by testing candidate offsets on the
-   *known* spice-small class pointer, `0x75c26017b270`, and checking whether the decoded name
-   plausibly contains "Spice"?) before trusting any result for an unknown class.
-3. Keep trying to catch a `field_kind_id=0` (`mystery`) field while active for in-person ID —
-   the seed-mode scan already gives live positions for all 533, so this is now much easier than
-   session 1's approach (teleport is still unreliable; give the closest live position to
-   wherever the player already is).
-4. Once enough positions + names are solid, design and implement the real Live Map integration
-   in `dune-awakening-selfhost-docker` (new branch, new `console/api` route reading the
-   scanner's output, new marker/layer type with an `overlays`-based freshness indicator per the
-   design constraints below).
+## Session 3 (2026-08-22) — "mystery" identified, `field_id` decoded, ore classes named
+
+**Read this section before acting on anything above it — several session-2 conclusions are
+superseded here.** Everything below was verified live against `dune-dev` (PID 1270301,
+DeepDesert_1 partition 8) in the same session it was written.
+
+### 1. `field_kind_id = 0` is **Flour Sand** — CONFIRMED, twice, independently
+
+- Operator stood **4.5 m** from the memory-scanned position `(-638575, -536975)` with flour sand
+  directly beneath them.
+- `dune.markers` contains a `FlourSand` row at **exactly** that coordinate (Z 1446 vs scan 1447).
+
+The session-2 note above that "ruled out" a spice relationship was rejecting a *different*
+hypothesis — "inactive spice that flips to `field_kind_id=1`" — and remains correct on its own
+terms. Flour Sand being its own separate resource is consistent with all four of its points
+(distinct class pointer, constant non-spice value, own active/dormant cycle, comparable
+population). Stop calling this "mystery".
+
+### 2. `field_id` is a packed 21-bit coordinate triple — the single most useful finding
+
+```
+x =  id        & 0x1FFFFF
+y = (id >> 21) & 0x1FFFFF
+z = (id >> 42) & 0x1FFFFF
+for each: if v > 0xFFFFF: v -= 0x200000
+```
+
+Raw decoded values are world units — **no scaling**. Verified against memory-scan ground truth:
+**spice 53/57 exact XY matches, flour sand 45/59**.
+
+**Consequence: active spice and flour-sand positions can be read straight from Postgres.** The
+memory scanner is *not* required on the Live Map's data path. Decode from string/BigInt —
+`field_id` exceeds `Number.MAX_SAFE_INTEGER` and a JS `Number` silently loses low bits.
+
+### 3. Resource positions are static per map and identical across instances
+
+Full set diff of two independent DeepDesert processes (partition 32 vs partition 8):
+flour sand 533/533, spice-small 281/281, spice-medium 89/89 — **zero differences**. A single scan
+is therefore valid for every instance, and does not go stale when an instance respawns.
+
+### 4. Memory holds candidate pools; the DB holds the active subset
+
+| Map | Flour Sand active | Spice active | Flour in memory | Spice in memory |
+|---|---|---|---|---|
+| DeepDesert | 59 | 56 | 533 | 376 |
+| HaggaBasin | 17 | 4 | not scanned | not scanned |
+
+This is what makes the operator's "solid = active, faded = inactive candidate" product ask
+implementable. Flour sand candidates sit on a strict **6,350 UU (63.5 m) grid** (all 277 distinct
+X and 247 distinct Y values are exact multiples apart) with terrain-following Z; spice is
+free-placed (GCD 25) and **never** shares a position with flour sand (0 of 376 coincide).
+
+### 5. `dune.markers` — a named POI/ore atlas, but **discovery-driven, not complete**
+
+1,251 rows (DeepDesert 440, HaggaBasin 752), composite type `(type, x, y, z)`, joinable via
+`dune.map_names`. Contains real named ore veins, pickups, scrap, shipwrecks, caves, sietches,
+vendors, trainers and hazards. `dune.player_markers` (2,279 rows) tracks per-player discovery.
+
+**Critical caveat — this table is populated live as players explore, and is never complete.**
+Demonstrated directly this session rather than inferred: DeepDesert marker count went from **440
+to 537** (and the whole table from 1,251 to 1,358) *during a single session* while the operator
+flew around one grid cell. Mapping markers onto the 9×9 grid before and after:
+
+| Cell | discovered (before → after) | long_range |
+|---|---|---|
+| F-4 | **0 → 87** | 1 |
+| E-4 | 0 → 7 | 0 |
+| F-5 | 0 → 2 | 0 |
+| G-3 | 184 | 0 |
+| A-2 | 171 | 5 |
+| D-1 | 45 | 1 |
+| H-3 | 31 | 0 |
+| A-5, A-8 | 0 | 1 each |
+
+The mechanic is the **`long_range` boolean column**, not geography:
+- `long_range = true` (TaxiService ×3, Ecolab ×3, Cave ×2, Shipwreck ×1) — present without ever
+  visiting. This is why cells the operator has never entered (A-5, A-8) still hold a TaxiService.
+- `long_range = false` (all 527 ore/pickup/scrap/bush rows) — appear only once discovered up close.
+
+There is also an `area_id` column grouping markers into regions (the F-4 area is `area_id=30`,
+the A-2 region is `11`). **Never present `dune.markers` to players as an exhaustive atlas.**
+
+**The architecture this implies — use both sources for what each is good at:**
+the scanner yields *complete* positions but no names; `dune.markers` yields *names* but only where
+explored. Identify a **class pointer** once from any single discovered marker (section 6), and
+every instance of that class map-wide inherits the name — **including in cells nobody has ever
+visited**. This was demonstrated directly: a scan of F-4 found 7 TitaniumOre, 6 StravidiumOre,
+8 ScrapMetalWreckage, 3 BauxiteOre, 1 Shipwreck and 1 RhyoliteOre **by class pointer**, at a
+moment when `dune.markers` still listed zero markers for that cell.
+
+Semantics (confirmed by operator): `*Ore` = the minable vein; `*Part`/`*Pickup` = the small
+hand-collected chunks.
+
+### 6. Class pointer → resource name, established without any in-game visual check
+
+Method: scan a coordinate that `dune.markers` *already labels*, and whatever class appears there
+is that resource. Sub-metre position matching makes this unambiguous. **This supersedes the
+session-2 plan of walking to candidates in-game, and makes the FName/`FNamePool` reverse
+engineering unnecessary** — do not spend time on that.
+
+| Class pointer (PID 1270301, ASLR-specific) | Resource | Best match | Confirmations |
+|---|---|---|---|
+| `0x7cfef4325730` | TitaniumOre | 0.08 m | 3 |
+| `0x7cfef432bb90` | StravidiumOre | 0.06 m | 2 |
+| `0x7cfef55052a0` | BauxiteOre | 0.38 m | 1 |
+| `0x7cfeef5b0080` | RhyoliteOre | 0.25 m | 1 |
+| `0x7cfc3f390700`, `0x7cfc44d23730` | RhyolitePickup | 0.04 m | 2 |
+| `0x7cfc32810cd0`, `0x7cfc328120b0` | ScrapMetalPart | 0.27 m | 2 |
+| `0x7cfef23bb270`, `0x7cfef23ba030`, `0x7cfef23b2500` | ScrapMetalWreckage | 0.05 m | 3 |
+| `0x7cff4a976b80` | Shipwreck | 0.00 m | 1 |
+
+Pointers are per-process (ASLR) — re-derive them after any restart; the *method* is what carries
+over. Families cluster by memory pool (`0x7cfef432****` = Ore types, `0x7cfef23b****` = Scrap
+Wreckage), confirming session 2's sibling-actor-role reasoning: many of the "26 unidentified
+classes" are sibling roles of the same resource, not distinct resources.
+
+**False-positive warning:** `0x7cfee8b30510` and `0x7cff4a926080` matched TitaniumOre at 0.86 m
+but are the **player's own character and controller** — the operator was standing beside the vein.
+Always exclude actors sitting at the player's live position before drawing conclusions.
+
+### 7. Corrections to third-party claims that entered this session
+
+Pasted reference material was **right** about `field_kind_id=0` = Flour Sand and the `field_id`
+packing, but **wrong** about: 23,413 marker rows (real: 1,251), `AzuriteOre` 3,067 (real: 6),
+`Shipwreck` 30 (real: 14), and `game_events.event_type=0` = "devoured by Shai-Hulud" (real:
+`event_type=13` is base totem shield state). Its Leaflet `coordScaleX`/`coordOffsetX` calibration
+constants do **not** match Core at all — Core uses `LIVE_MAP_CONFIGS` min/max bounds
+normalisation on 4096×4096 images (`duneDb.js`, `worldToLiveMapPoint` in `LiveMapPanel.tsx`).
+Treat that whole document as unverified: some of it is accurate, much of it is not.
+
+### 8. Open items
+
+- 14 of 59 active flour-sand fields decode to positions **absent** from the memory scan's 533 —
+  the scan under-counts. Cause unknown. Not blocking, since the DB is authoritative for active
+  fields.
+- The 6 `spice-large` memory hits look like false positives (grid-round coordinates
+  -304800/-1016000/0, identical Z of -4143.93). The DB reports only 2 active large fields, both
+  of which decode correctly.
+- `ValidTransform` accepts denormal near-zero coordinates → garbage hits. Filed as issue #14.
+- Core bug (different repo): `liveMapBases()` filters `coalesce(a.partition_id,0) > 0`, so a base
+  whose instance has despawned (NULL partition — observed live this session) **silently vanishes
+  from the Live Map**.
+- Sandworm spawns, the desert mouse, and Imperial Testing Stations: no data source found in any
+  table checked. Parked.
+
+### 9. Revised next steps
+
+1. Build the Live Map resource layer in `dune-awakening-selfhost-docker` from **three** sources,
+   each used for what it is actually authoritative about:
+   - `resourcefield_state` + `field_id` decode → **active** spice (tiered) and Flour Sand. Live,
+     exact, no scanner needed. Both maps.
+   - `dune.markers` → **names** for class pointers, plus named static POI (caves, sietches,
+     vendors, taxi, shipwrecks). Never presented as exhaustive.
+   - scanner output → **complete** ore/resource positions map-wide, labelled by joining each
+     actor's class pointer to the name table in section 6.
+2. An intermediate ship is viable and worth considering: the `resourcefield_state` layer alone
+   needs no scanner, no file drop, and no privileged process, so it can land first while the
+   scanner-fed ore layer follows.
+3. Re-derive the class→name table after any server restart (ASLR). The *method* (section 6) is
+   the durable artifact, not the pointer values.
+
 - Go 1.24.4 is available locally on this machine; NOT installed on `dune-dev` — doesn't matter,
   cross-compile locally (`GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build`) and `scp` the static
   binary over (`/tmp/dune-resource-scanner` on dune-dev — not persisted anywhere, redeploy after
