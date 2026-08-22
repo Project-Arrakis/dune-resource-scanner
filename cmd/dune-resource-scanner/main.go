@@ -70,7 +70,7 @@ func run(args []string, out io.Writer) error {
 	}
 	defer memFile.Close()
 
-	exeRegions := memscan.FilterExecutable(regions)
+	exeRegions := memscan.MainModuleRegions(regions)
 	heapRegions := memscan.HeapLikeRegions(regions)
 	if len(heapRegions) == 0 {
 		return fmt.Errorf("no heap-like (anonymous writable) regions found in %s", mapsPath)
