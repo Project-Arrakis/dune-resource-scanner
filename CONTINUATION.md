@@ -252,12 +252,47 @@ matching `%station%`/`%testing%`/`%facility%`. Only one station is currently dis
 operator reports there should be roughly ten (about four active, the rest present but
 inaccessible), which the discovery mechanic above fully explains.
 
-In memory a station is unmistakable: a scan centred on the operator inside one returned 1,640
-actors in a 120 m box, **1,505 of them underground** (Z ≈ −2,200) across 241 classes. The two
-dominant classes (`0x7cff8a0c1380`, `0x7cff4ab11bc0`) are **generic structural/ruin pieces** also
-found around Shipwreck and Ecolab markers elsewhere, so they identify "a built interior", not a
-station specifically. **Negative Z is the useful detection signal** — ore, spice, flour sand and
-flora all sit at positive Z on terrain, while interiors sit below zero.
+In memory a station is unmistakable **while a player is inside it**: a scan centred on the
+operator standing in one returned 1,640 actors in a 120 m box, **1,505 of them underground**
+(Z ≈ −2,200) across 241 classes. The two dominant classes (`0x7cff8a0c1380`, `0x7cff4ab11bc0`) are
+**generic structural/ruin pieces** also found around Shipwreck and Ecolab markers elsewhere, so
+they identify "a built interior", not a station specifically.
+
+### 5c. Structure geometry is streamed; resource actors are resident — tested, not assumed
+
+An idea proposed and then **disproven the same session**: enumerate every testing station by
+scanning the whole map for underground (Z < 0) clusters. It does not work, and the reason matters
+for anything built on the scanner.
+
+A human-produced map places DeepDesert stations at D-4, F-4/5, D-5/6 and F-7/8. Our one
+DB-discovered station (`area_id=30`) is in F-4/5, matching that map exactly — good independent
+validation of the grid calibration. A targeted scan of the **D-4** cell (2.7 km box) was then run
+to see whether an *undiscovered* station shows up in memory:
+
+| | D-4 (no player present) | F-4 station (player inside) |
+|---|---|---|
+| Total actors | 863 | 1,640 |
+| **Named resource actors** | **39** | 6 |
+| **Underground structural actors** | **0** | **1,505** |
+
+The inversion is the finding:
+
+- **Resource actors are resident map-wide with no player anywhere near.** D-4 returned 10
+  TitaniumOre, 10 StravidiumOre, 10 ScrapMetalWreckage, 6 BauxiteOre and 3 RhyoliteOre from
+  ~27 km away, all identified by class pointer. **Full-map resource mapping via the scanner
+  works.**
+- **Structure geometry is streamed per-player and is absent otherwise.** The station interior
+  existed in memory only because the operator was standing in it. D-4's station, if it has one,
+  simply is not loaded.
+
+**Consequence: the scanner cannot enumerate unoccupied structures.** Stations, caves, ecolabs and
+shipwrecks are findable only via the DB's discovery mechanic or by a player physically going
+there. Do not build a POI layer that claims completeness. Resource layers have no such limit.
+
+(The 2 "underground" hits D-4 did return sit at exactly X=-304800, Y=101600 with an identical Z —
+the same grid-round signature as the bogus `spice-large` hits, i.e. false positives, not a
+structure. Also note D-4's 10/10/10 resource counts are suspiciously round and were not
+cross-checked against markers; treat per-cell counts as unverified until they are.)
 
 Related unexplored lead: `dune.actor_spawners` holds 14 `CB_WreckedShip_Medium_001` entries for
 DeepDesert (10 in `dimension_index=0`, 4 in `dimension_index=1`, the latter a strict subset)
