@@ -381,6 +381,51 @@ and "Basalt Stone" separately but inventories only ever show `Stone`.
   `dune.items`. **Dropped loot is therefore fully DB-tracked and needs no memory scanning at all**,
   unlike hidden treasure or testing stations. A dropped-loot map layer would be trivial and exact.
 
+### 6d. Confirmed node -> item -> display names (inventory diff, 2026-08-22)
+
+Every row below was confirmed by the operator gathering a single node and diffing
+`dune.items`; quantities matched what they reported in-game exactly.
+
+| Node / marker | Item `template_id` | In-game display |
+|---|---|---|
+| `AzuriteOre` | `AzuriteOre` | **Copper Ore** |
+| `MagnetiteOre` | `MagnetiteOre` | **Iron Ore** |
+| `ErythriteOre` | `ErythriteCrystal` | Erythrite Crystal |
+| `BrittleBush` | `PlantFiber` | Plant Fiber |
+| `RhyoliteOre` / `RhyolitePickup` | `Stone` | **Granite Stone** |
+| `FuelCellPart` | `Oil` | (display not yet checked) |
+
+**Node name, item name and display name are three independent things.** All four combinations
+occur: name carried through unchanged (`AzuriteOre`), mineral name internally with a different
+display (`MagnetiteOre` -> "Iron Ore"), node name changed for the item (`ErythriteOre` ->
+`ErythriteCrystal`), and a generic shared item across distinct node types (`Rhyolite*` and
+`BasaltOre` both -> `Stone`). **Never infer one from another** -- gather and diff. Inferring from
+mineral chemistry alone would have produced at least one confident error (Erythrite is a cobalt
+mineral, but yields `ErythriteCrystal`, not a cobalt item).
+
+Still unconfirmed by item as of this writing: `Dolomite*` (Carbon Ore, marker only),
+`BasaltOre`/`BasaltPickup`, `TitaniumOre`, `StravidiumOre`, `BauxiteOre` (strong class matches but
+never gathered), `ScrapMetalPart` vs `ScrapMetalWreckage` (no clean single-variable gather), and
+Jasmium (Hagga only, never located).
+
+### 6e. Sandworms, sandstorms and the Coriolis seed
+
+- **Coriolis seed is readable from the DB** via `dune.debug_get_coriolis_seeds()` -- DeepDesert
+  and HaggaBasin both seed `2` at time of writing, matching the seed gaming.tools' API uses.
+  Related functions exist: `coriolis_update_seed`, `coriolis_cleanup_partition`,
+  `update_coriolis_for_player`, `coriolis_cleanup_farm`. **A seed change is the signal that the
+  map has regenerated** -- the natural trigger for a full re-scan after a Coriolis storm.
+- **Ordinary sandstorms do not change the seed** (verified across one live storm) and are not
+  tracked in any table. They are visible only indirectly, as `game_events` `event_type=13` rows
+  with `m_TotemShieldStateChangedReason: "Sandstorm"` -- i.e. only where a player owns a structure
+  the storm passes over. Three clean Disabled -> Restored pairs on 2026-08-22 give a consistent
+  duration of **~7 minutes**; the irregular gaps between them (1h to 8h) reflect storms that
+  spawned elsewhere and missed the totem, not irregular timing.
+- **Sandworms are not tracked at all.** Checked live while one was active: no worm actor in
+  `dune.actors` (the only sandworm match is a decorative statue placeable), and no worm row in
+  `game_events`. Worm presence is memory-only, and worms despawn well inside the 2-5 minute a
+  scan takes, so catching one would need a fundamentally faster capture.
+
 ### 6c. Correction: `dune admin teleport` does work, with a delay
 
 This document previously recorded admin teleport as accepted by RabbitMQ but never moving the
