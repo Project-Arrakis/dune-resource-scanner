@@ -349,6 +349,48 @@ classes" are sibling roles of the same resource, not distinct resources.
 but are the **player's own character and controller** — the operator was standing beside the vein.
 Always exclude actors sitting at the player's live position before drawing conclusions.
 
+### 6b. Inventory diffing — a better identification channel than scanning
+
+Found late in the session and **preferable to memory scanning for resolving internal item names**:
+snapshot `dune.items` joined to `dune.inventories`, have the operator gather one node, diff.
+It is instant, exact, costs no CPU on the game server, and cannot produce the false positives
+scanning does.
+
+Confirmed live: the operator reported "504 iron ore", and the diff showed **`MagnetiteOre` 504**
+appear, then 512 when they gathered eight more. **`MagnetiteOre` = "Iron Ore"** — settled from the
+item side with zero inference, independently confirming the note in Core's own
+`BaseInventoryTab.test.tsx`. This also validates the whole naming convention: **the game uses real
+mineral chemistry internally and display names externally**, which makes the Bauxite→Aluminum,
+Azurite→Copper and Dolomite→Carbon mappings far safer to rely on.
+
+**`Rhyolite` = "Granite Stone"** — confirmed the same session by teleporting the operator to a
+`RhyolitePickup` marker (they landed 0.2 m from it) and having them report what they were standing
+on. This had been flagged twice as an unverified guess, with Basalt named as the plausible
+alternative; it is now settled. Note the *node* types are distinct (Rhyolite vs Basalt) while the
+*item* both drop is the generic `Stone` template — which is why gaming.tools lists "Granite Stone"
+and "Basalt Stone" separately but inventories only ever show `Stone`.
+
+**Two traps in the diff method, both hit live:**
+- **Items leave the player's inventory.** Filtering on `i.actor_id = <player>` showed iron
+  *vanishing* after a gather, because the operator had dropped it. Order by
+  `dune.items.acquisition_time` instead — it cuts through inventory moves and shows exactly what
+  was acquired and when, regardless of where it ended up.
+- **Dropped items become a real actor.** They land in a
+  `/Game/Dune/Systems/Looting/BP_LootContainer.BP_LootContainer_C` — a backpack on the ground —
+  with its own row in `dune.actors` (live transform), `dune.inventories`, and full contents in
+  `dune.items`. **Dropped loot is therefore fully DB-tracked and needs no memory scanning at all**,
+  unlike hidden treasure or testing stations. A dropped-loot map layer would be trivial and exact.
+
+### 6c. Correction: `dune admin teleport` does work, with a delay
+
+This document previously recorded admin teleport as accepted by RabbitMQ but never moving the
+character. **That is wrong, or at least no longer true.** A teleport issued this session
+(`DUNE_ADMIN_ASSUME_YES=1 dune admin teleport '<fls-id>' -812980 495 -1200`) was initially judged
+broken because an immediate position re-read returned byte-identical coordinates — but the
+operator did in fact arrive, landing 0.2 m from the target marker. **The position check was simply
+made too soon.** Wait several seconds and re-read before concluding a teleport failed. The earlier
+"confirmed broken" finding should be treated as suspect for the same reason.
+
 ### 7. Corrections to third-party claims that entered this session
 
 Pasted reference material was **right** about `field_kind_id=0` = Flour Sand and the `field_id`
