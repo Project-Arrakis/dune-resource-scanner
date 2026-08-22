@@ -76,69 +76,83 @@ mystery=533`. The `mystery=533` figure is an exact match to the "533-position po
 session found via a completely different method (DB query), independently confirming both the
 Go rewrite's correctness and that session's finding.
 
-**Proximity mode found the base's own island's raw-resource layout.** `FindNearbyXY`'s
-`tolerance` is a per-axis box half-width, not a Euclidean radius (i.e. `-tolerance 50000` means
-a 100,000×100,000 unit search box centered on `-near`, not a 50,000-unit-radius circle) — keep
-this in mind when picking a value. Scanning progressively wider boxes around the base
-(X=-611736.35, Y=-700183.46) and grouping hits by `ClassPrivate` revealed:
-- Several large classes (34/33/16/15 members, `Z` including exactly `0.0` for some instances,
-  tightly bound to the base's own footprint at every tolerance) — almost certainly base-building
-  components (walls/foundations/etc.), not raw resources.
-- **One class (`ClassPrivate 0x75c268f7ade0`) forms a tight group of exactly 20 members within
-  ~48,700 units of the base, followed by a clean ~18,500-unit distance gap before the next
-  members appear** (at 67k-137k units — almost certainly *other* Titanium deposits on entirely
-  different, distant islands, not this one). This 20-member, this-island-only group is the
-  **strongest candidate for the "at least 20, if not more" Titanium Ore nodes** the user
-  described from direct in-game knowledge of this island — count matches exactly, spatial
-  spread is consistent with natural terrain placement (not a tight building grid), `Z` varies
-  naturally (866-4837, real elevation, never a suspicious exact `0.0`), and `BaseValue` is
-  uniformly `0` (expected — ore nodes have no `resourcefield_state`-style tracked value, unlike
-  spice). Full position list saved at the bottom of this section.
-- Several other mid-size classes (25/22/16/14/12/11 members, similarly natural-looking spread)
-  are plausible candidates for the *other* mineral types this island likely also hosts
-  (Bauxite/Azurite/Dolomite/Rhyolite/Impure Fuel/Flour Sand — see the internal-name findings
-  from session 1 below) — **not yet individually identified**, this is the next real task.
-- **Identity (`0x75c268f7ade0` = Titanium specifically, not confirmed by any other means yet)
-  is strong circumstantial evidence, not proof.** Resolving it definitively needs either (a) an
-  in-game visual check — the closest candidate is only ~8,166 units from the base (nearest:
-  X=-612311.21, Y=-708329.60, Z=4396.67), a short trip for whoever's playing `DarkDante` — or
-  (b) resolving the UClass's real name from its `ClassPrivate` pointer in memory, which needs
-  new reverse-engineering (UE's FName/global-name-table format) not yet attempted.
+**Proximity mode found the base island's actor layout — and the tool's identification was
+independently proven correct against known ground truth, but full identity resolution for
+unknown classes hit a genuine, honestly-reported wall.** `FindNearbyXY`'s `tolerance` is a
+per-axis box half-width, not a Euclidean radius (`-tolerance 50000` means a
+100,000×100,000-unit search box centered on `-near`, not a 50,000-unit-radius circle) — keep
+this in mind when picking a value.
 
-**Candidate Titanium Ore positions (this island only, sorted by distance from base):**
-```
-dist(u)   X            Y            Z
-  8166.4  -612311.21   -708329.60   4396.67
- 10556.5  -612296.60   -710725.07   4620.71
- 10930.3  -611898.40   -711112.56   4836.92
- 14527.5  -608950.03   -714441.26   4525.85
- 29117.6  -635427.81   -717111.16   1302.05
- 29843.6  -635612.51   -718087.98   1463.68
- 30040.1  -582270.73   -706030.34   1865.32
- 30617.6  -635255.09   -719787.15   1640.30
- 30757.0  -581666.42   -706647.92   1855.00
- 31687.9  -580866.06   -707335.38   1155.30
- 33373.8  -578807.41   -705614.74   2445.00
- 33911.2  -584812.29   -720800.47   1006.36
- 34802.9  -639933.52   -720583.52   2277.58
- 35694.3  -585962.32   -724877.24    866.61
- 39670.0  -579835.88   -723764.61   1081.72
- 42157.5  -620542.08   -741411.08   2087.22
- 42413.3  -623279.90   -740995.63   2107.43
- 42651.4  -577443.72   -725543.99   1064.25
- 47866.7  -625103.54   -746145.79   2124.59
- 48679.5  -627843.01   -746121.14   2160.14
-```
+**Ground-truth validation (the important, solid result):** re-running seed mode with the
+now-current binary (after `ClassPrivate` was added) gave the *actual* class pointers for the
+100%-DB-confirmed classes: `spice-small=0x75c26017b270`, `spice-medium=0x75c25f246970`,
+`spice-large=0x75c236912500`, `mystery=0x75c25f247290`. Cross-checking these against the wide
+proximity scan's class groups found **exact address matches** for `spice-small` and `mystery`
+among the "natural-looking" clusters the scan had already flagged — independent proof that
+proximity-scan + `ClassPrivate`-clustering correctly identifies real, distinct actor classes.
+This is the strongest evidence yet that the whole tool (maps parsing, actor validation, class
+grouping) is sound.
+
+**A methodological correction, found and fixed by testing the assumption, not by trusting it:**
+an earlier version of this section flagged several large classes (34-75 members) as "almost
+certainly base-building components" because some instances had `Z` exactly `0.0`. Re-checked
+directly: those classes' *closest* member to the base is 11,000+ units away — far outside any
+plausible building footprint — which falsifies that claim outright (a real base-building class,
+separately confirmed via a genuinely tight `-tolerance 3000` scan, has ~13 distinct classes each
+with only 1-2 members, none overlapping the large classes at all). The `Z=0.0` instances are
+more likely depleted/respawning resource nodes reset to a default transform, not proof of
+anything about their real nature. **Lesson for whoever picks this up next: don't trust a
+classification heuristic that hasn't been checked against its own stated claim (here, "tightly
+bound to the base's footprint" was asserted without ever computing the actual minimum
+distance) — this is exactly the kind of unverified claim Requirement 12 exists to catch, applied
+to a live investigation instead of a doc.**
+
+**Honest current state: 2 of ~28 distinct classes near the island are proven-identified (spice,
+mystery); the rest are NOT.** After excluding the 4 known spice/mystery class pointers, **26
+distinct classes with 3+ members remain unidentified** near the base's island (full data:
+`findings/2026-08-21-base-island-survey.json` in this repo — positions, counts, class pointers
+for all of them). The single strongest remaining candidate is still `ClassPrivate
+0x75c268f7ade0` — 28 members within a clean, isolated distance band (8,166-48,680 units, then an
+~18,500-unit gap before the next group at 67k+, i.e. other islands) matching the user's "at
+least 20, if not more" Titanium Ore count and showing natural (non-grid) spatial/elevation
+spread — but this is still circumstantial, not proven. **A real, bounded attempt was made to go
+further and definitively resolve identity:**
+- Checked `dune database tables` for anything that might track ore-node positions/types
+  server-side: `actor_spawners` (only PlayerStart/encounter spawners, not resource nodes) and
+  `fgl_entities` (a real per-entity JSONB component store, but only for player-persisted objects
+  — bases, vehicles, characters; only 1175 rows total, no resource-node components at all).
+  Neither helps — confirms the prior session's finding that ore-type resources genuinely have
+  zero server-side tracking, memory scanning is the only path to their positions.
+- Considered resolving the UClass's real name from its `ClassPrivate` pointer (UE's
+  FName/global-name-table format) — **deliberately not attempted**: this requires guessing
+  multiple unknown, version-specific implementation details (the `UObject::NamePrivate` field
+  offset, the `FNamePool` block/offset encoding scheme) with no way to verify a guess is correct
+  against ground truth we don't have, meaning a wrong guess would produce a *confidently wrong*
+  identification — strictly worse than the current, honestly-labeled "unconfirmed candidate."
+  This is a real R&D task for a future session with more time to spend verifying each assumption
+  empirically, not something to rush.
+
+**The reliable, fast path to full identification is still a short in-game visual check** — the
+closest Titanium candidate is only ~8,166 units from the base (X=-612311.21, Y=-708329.60,
+Z=4396.67). Once even one class is visually confirmed, the same seed/proximity + class-pointer
+methodology already proven against spice/mystery can immediately attach a real name to it and,
+from there, likely several of the remaining 25 classes at once (many share a pointer-neighborhood
+prefix with the Titanium candidate — e.g. `0x75c268f76xxx`/`f73xxx`/`f74xxx`/`f71xxx`/`f7cxxx` —
+suggesting they're sibling actor roles of the *same* resource family, spawner/pickup/component,
+per the `BP_<Mineral>_Spawner`/`BP_<Mineral>_Pickup_[A/B]_Spawner`/`BP_<Mineral>_Component`
+pattern found in session 1 — not 25 independent resource types).
 
 ## Immediate next step for the next session
-1. **Get identity confirmation** on `0x75c268f7ade0` — walk to the closest candidate (8166
-   units from base) and visually confirm it's Titanium Ore, or attempt UClass-name resolution
-   from memory (new R&D, no known offset for UObject's FName yet).
-2. **Identify the other mid-size clusters** the same way (25/22/16/14/12/11-member classes found
-   in the same scans) — cross-reference against the session-1 internal-name findings
-   (Bauxite→Aluminum Ore, Azurite→Copper Ore, Dolomite, Rhyolite, ImpureFuel,
-   CompactedFlourSand) once at least one is visually confirmed, to calibrate which class pointer
-   maps to which mineral.
+1. **Get one real identity confirmation** — walk to the closest Titanium candidate (8166 units
+   from base) and visually confirm, or pick any other listed position and confirm whatever it
+   actually is. One confirmed class pointer, cross-referenced by pointer-prefix family against
+   `findings/2026-08-21-base-island-survey.json`, likely resolves several of the 26 unidentified
+   classes at once (see the sibling-actor-role reasoning above).
+2. If pursuing FName resolution instead of a visual check: don't guess offsets/encoding blind.
+   Start by finding a way to verify each assumption against something already known (e.g., can
+   the `UObject::NamePrivate` field be found empirically by testing candidate offsets on the
+   *known* spice-small class pointer, `0x75c26017b270`, and checking whether the decoded name
+   plausibly contains "Spice"?) before trusting any result for an unknown class.
 3. Keep trying to catch a `field_kind_id=0` (`mystery`) field while active for in-person ID —
    the seed-mode scan already gives live positions for all 533, so this is now much easier than
    session 1's approach (teleport is still unreliable; give the closest live position to
