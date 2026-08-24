@@ -124,6 +124,20 @@ normalisation on 4096×4096 images — **reuse it; do not introduce a second cal
 Known bug to fix while there: `liveMapBases()` filters `coalesce(a.partition_id,0) > 0`, so a base
 whose instance despawned silently vanishes from the map.
 
+## Two experiments left over from 2026-08-24, both cheap
+
+1. **Zero-player scan (settles the last post-storm dependency).** Every scan so far ran
+   while a session was registered Online on `DeepDesert_1`. Log fully out of DD, confirm
+   `dune admin players --online` shows nobody on that map, wait past the autoscaler's
+   300 s grace period, then re-run `census.go`. If it still returns marker-validated data,
+   the post-storm path needs no player at all; if the process is gone, the Live Map must
+   trigger its scan while someone is on the map.
+2. **Walk-to validation (teleport does NOT work — see §6c).** Targets, controls and the
+   exact before-state are in `findings/2026-08-24-issue-16/README.md`. Four predictions
+   ~100 m from the operator's DD base, in terrain with no marker within ±6 km. A positive
+   result would also yield the first *labelled* records in unexplored terrain, which is
+   what type attribution has always lacked.
+
 ## Working practices that matter
 
 - **`dune admin teleport` does not work** (re-tested 2026-08-24 at long range, a second

@@ -268,21 +268,47 @@ both. A per-axis threshold -- the obvious first implementation, and one that was
 written and caught before merge -- would have silently discarded up to 98 real
 nodes.
 
-### Ground-truth validation targets
+### Ground-truth validation targets — PENDING, and teleport cannot be used
 
-Three clusters of predicted nodes in terrain with **no known marker within
-8,000 uu**, i.e. never explored. A positive result proves the scanner finds
-undiscovered nodes, which is precisely the post-storm capability. Z is +200 so
-the operator lands above ground:
+**`dune admin teleport` does not work** (re-tested three ways on 2026-08-24, see
+`CONTINUATION.md` §6c). Any validation plan must therefore use targets the
+operator can walk to from where they already are.
+
+The best available setup, measured from the operator's DD base at
+`(-633899, -636683, 4144)` against the census captured at that moment
+(84,606 records) and the marker set at that moment (9,702):
+
+**Controls** — already-marked nodes the census also predicts, confirming the
+matching is sound:
+
+| Distance | Position | Marker |
+|---|---|---|
+| 3 m | `-634146, -636892` | TitaniumOre (1 uu away) |
+| 3 m | `-634112, -636469` | TitaniumPickup (46 uu) |
+| 15 m | `-634703, -635390` | StravidiumOre (1 uu) |
+
+**The test** — four predictions ~100 m from that base, clustered within ~40 m of
+each other, with **no known marker within the ±6 km search window**:
 
 ```
-dune admin teleport '<fls-id>'  185338  711895  2180     # 141 predictions nearby
-dune admin teleport '<fls-id>' -579810  515940  2133     # 125 predictions nearby
-dune admin teleport '<fls-id>'  500113  214825  3288     # 110 predictions nearby
+X=-642724  Y=-632230  Z=6447
+X=-643136  Y=-632752  Z=6385
+X=-643137  Y=-632328  Z=6429
+X=-643561  Y=-632350  Z=6492
 ```
 
-Needs `DUNE_ADMIN_ASSUME_YES=1`, and per §6c wait several seconds before
-re-reading position.
+They sit ~23 m uphill of the base (Z ~6,400 vs 4,144).
+
+**Outcome to look for.** Simply approaching a real node registers a marker, and
+markers carry a **type** — so a positive result would hand the type-attribution
+work its first labelled records in never-explored terrain, which it has never
+had. A negative result is equally informative: it would mean a meaningful share
+of "predictions" are noise and the ~60% figure is measuring something narrower
+than it appears.
+
+Capture the before-state first (marker count and a census), so whatever appears
+is unambiguous. This run's before-state is
+`../2026-08-24-validation/` plus the 9,702-marker snapshot.
 
 ## Where the next session should start
 
