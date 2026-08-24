@@ -6,7 +6,7 @@
 // Format, empirically derived and verified against 58 consecutive real
 // entries with zero decode failures on 2026-08-24:
 //
-//   [2-byte LE header][Length raw ASCII bytes][1 pad byte if Length is odd]
+//	[2-byte LE header][Length raw ASCII bytes][1 pad byte if Length is odd]
 //
 // header = (Length << 6) | ProbeHash6 -- the low 6 bits are a comparison
 // hash used for fast interning lookups, not part of the string. Entries are
@@ -19,9 +19,22 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 )
+
+// addrToOffset converts a process virtual address to the signed offset
+// io.ReaderAt.ReadAt requires, with an explicit bounds check rather than a
+// bare cast. x86-64 Linux userspace addresses are always well under
+// math.MaxInt64, so this never actually fails for a real address -- the
+// check exists to make that guarantee explicit and verified, not assumed.
+func addrToOffset(addr uint64) int64 {
+	if addr > math.MaxInt64 {
+		panic(fmt.Sprintf("address %#x exceeds int64 range", addr))
+	}
+	return int64(addr)
+}
 
 func decodeBlock(data []byte, start int) (entries []struct {
 	Off  int
@@ -80,7 +93,7 @@ func main() {
 
 	const blockSize = 1 << 16
 	buf := make([]byte, blockSize)
-	if _, err := memF.ReadAt(buf, int64(blockAddr)); err != nil {
+	if _, err := memF.ReadAt(buf, addrToOffset(blockAddr)); err != nil {
 		fmt.Println("read block:", err)
 		os.Exit(1)
 	}

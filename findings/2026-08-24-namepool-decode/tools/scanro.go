@@ -75,7 +75,7 @@ func main() {
 					}
 					i := idx + rel
 					addr := r.Start + off + uint64(i)
-					ctx := string(b[max0(i-8) : min(len(b), i+len(nb)+24)])
+					ctx := string(b[max0(i-8):min(len(b), i+len(nb)+24)])
 					ctx = strings.Map(func(r rune) rune {
 						if r < 32 || r > 126 {
 							return '.'
