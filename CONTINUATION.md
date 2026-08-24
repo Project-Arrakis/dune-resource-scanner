@@ -481,7 +481,10 @@ Treat that whole document as unverified: some of it is accurate, much of it is n
 - The 6 `spice-large` memory hits look like false positives (grid-round coordinates
   -304800/-1016000/0, identical Z of -4143.93). The DB reports only 2 active large fields, both
   of which decode correctly.
-- `ValidTransform` accepts denormal near-zero coordinates → garbage hits. Filed as issue #14.
+- ~~`ValidTransform` accepts denormal near-zero coordinates → garbage hits. Filed as issue #14.~~
+  **Fixed 2026-08-24 (PR #17)** -- denormals, `Inf` and an out-of-world `Z` are all rejected now.
+  Note the Z bound is `WorldBound`, not a tight value, so it does **not** reject the `Z = 228598`
+  hit recorded in 10k; see Session 4 item 5 for why that was a deliberate choice.
 - Core bug (different repo): `liveMapBases()` filters `coalesce(a.partition_id,0) > 0`, so a base
   whose instance has despawned (NULL partition — observed live this session) **silently vanishes
   from the Live Map**.
@@ -690,10 +693,133 @@ are **empty**, so that system is not live on this server, which is why the
   out any explanation specific to DeepDesert's memory layout, its procedural content-block
   assembly, or Coriolis regeneration. **The defect is in the tool.** Logged as a comment on #16.
 - **`ValidTransform` does not bound Z.** `WorldBound` is applied to `x` and `y` only, so the false
-  positive above passed validation with `Z = 228598`. The #14 fix must add a Z bound as well as
-  the denormal and `IsInf` guards already described there.
+  positive above passed validation with `Z = 228598`. **Fixed 2026-08-24 (PR #17)** -- but with
+  `WorldBound` on all three axes, which does not reject `228598`; see Session 4 item 5.
 - **Minor:** an empty scan emits `null` rather than `[]` (Go marshalling a nil slice), which
-  breaks naive downstream parsers.
+  breaks naive downstream parsers. **Still open as of 2026-08-24.**
+- **Added 2026-08-24: `FindNearbyXY` accepted NaN pairs** (issue #18, PR #19) -- both range guards
+  were negations, and every NaN comparison is false, so NaN matched every target at every
+  tolerance. This was the source of ~17.4M of the 17.4M hits in a single scan. Fixed.
+
+## Session 4 (2026-08-24) -- #16 root cause found; the pass-2 architecture is wrong
+
+**Read this before section 11 -- it changes what Track A item 1 actually is.** All
+of it was measured live against `dune-dev` (DeepDesert `DeepDesert_1`, PID 390735).
+The Coriolis seed was still `2`, unchanged since session 3, so the map had not
+regenerated and `dune.markers` was still valid ground truth. Full evidence,
+including the four diagnostic tools, is in
+[`findings/2026-08-24-issue-16/`](findings/2026-08-24-issue-16/).
+
+### 1. The loss is entirely in pass 2. Pass 1 is perfect.
+
+Ground truth: the WindPass box (`-near=-4368,-198837 -tolerance 15000`) holds
+**211** `dune.markers` rows.
+
+| Stage | Coverage |
+|---|---|
+| Pass 1 -- raw (X,Y) transform located in memory | **211 / 211 (100%)** |
+| Pass 2 -- resolved to a validated actor | **6 / 211 (2.8%)** |
+
+Recall is also worse than #16 estimated: the 96 actors the baseline returns occupy
+only **42 distinct positions**, and just 6 sit on a real marker.
+
+**Positions were never the problem.** What the scanner actually fails to produce is
+a resource *type* per position.
+
+### 2. The hypothesis #16 was opened with is disproved
+
+#16 supposed actors were lost because the pointer to their `RootComponent` lay
+outside the scanned regions. It does not. An **offset-agnostic** probe searched
+`[hit-2048, hit]` for *any* pointer anywhere in memory, then walked back up to 2048
+bytes from each looking for a valid vtable/ClassPrivate chain, assuming neither
+`Transform=384` nor `RootComponent=576`:
+
+| Probe | pass-1 hits | resolutions |
+|---|---:|---:|
+| TitaniumOre `-3814,-198877` (baseline "finds" it) | 13 | **0** |
+| TitaniumOre `-7923,-207410` (baseline misses it) | 13 | **0** |
+| ScrapMetalPart `-17893,-208453` (baseline misses it) | 14 | 2, at `tOff=1936, rcOff=1104` |
+
+**Nothing points into the 2 KB preceding these transforms.** Widening the region set
+cannot fix that. Note row 1: the node the baseline *does* report resolves to zero
+actors when probed precisely -- its wide-scan hit was a neighbouring actor 8.7 uu
+away, so several of the 6/211 "successes" are coincidental neighbours, not nodes.
+
+### 3. Ore/scrap/pickup nodes are spawn records in an array, not actors
+
+An annotated qword dump around a real TitaniumOre transform shows a repeating
+**384-byte record** (bases 384 apart):
+
+```
+ +0    HEAP-PTR              (sequential across adjacent records)
+ +8    0x0000000100000001
+ +16   2
+ +232  f64 x, y, z           z ~ 1_051_450   (pre-trace sentinel Z)
+ +256  f64 x, y, z           z ~ 2_844       (terrain-snapped Z)  <- hits land here
+ +280  EXE-PTR
+ +320  EXE-PTR
+ +336  EXE-PTR
+```
+
+The record before our node holds another node's position. The two triples 24 bytes
+apart read as a downward ground-snap trace. This matches section 10d: these are
+content-block spawner slots, the same family as `dune.actor_spawners`.
+
+**Spice and flour sand are unaffected** -- seed mode reaches them through the
+`BaseValue` field inside a genuine actor, which is why that path always worked. The
+`actor -> RootComponent -> transform` architecture is correct for them and wrong for
+everything else.
+
+### 4. The fix direction: a spawn-record signature, not an actor chain
+
+Filtering pass-1 hits to those whose `hit-256` matches the record signature (heap
+pointer at `+0`, `0x0000000100000001` at `+8`):
+
+| | Unfiltered | Signature-filtered |
+|---|---:|---:|
+| Plausible-Z hits | 106,467 | **274** |
+| Markers covered | 211 / 211 | **152 / 211 (72%)** |
+| Copies per marker | 8 - 334 | **1 - 2** |
+
+A signature taken from a single dump cuts the candidate set by 99.7% and still
+covers 72% of known nodes -- a **25x recall improvement** over the shipped 2.8%,
+with no actor chain, no back-reference, and no `ClassPrivate`.
+
+Still missing: a **type** per record. Scoring every offset from -2048 to +512 found
+no value shared by all markers of a type and no others. Two leads remain, in order:
+relax the (probably over-strict) signature and re-measure; then follow the `+0` heap
+pointer to whatever it points at. The three EXE pointers at `+280/+320/+336` are the
+only module-relative values in the record, so if one identifies the type it would
+also be **stable across restarts**, solving the ASLR/anchor problem in section 10a.
+
+### 5. Two real defects found and fixed en route
+
+- **#18** -- `FindNearbyXY` accepted NaN pairs: both guards were written as "skip if
+  outside tolerance", and every NaN comparison is false, so NaN fell through both and
+  matched **every** target at **every** tolerance. 16 bytes of `0xFF` (two int64
+  `-1`s) is the common source. This produced **17,385,580** of the original 17.4M
+  hits. After the fix: 623,083 hits, marker coverage unchanged at 211/211, peak RSS
+  **12.6 GB -> 165 MB** -- material on a host with 24 GB free that also runs the live
+  game server. PR #19.
+- **#14** -- `ValidTransform` now rejects denormals, `Inf`, and out-of-world `Z`. The
+  Z bound is deliberately `WorldBound` rather than a value tuned to reject the
+  observed `Z = 228598` hit: across all 12,667 markers and live `dune.actors`, real
+  `|z|` never exceeds 75,246, but flying actors have no established ceiling, so a
+  tight bound risked real misses. **It therefore does not reject that specific hit.**
+  PR #17.
+
+### 6. Correction to section 11's Track A
+
+Track A item 1 said to instrument the passes, then "try widening the region set" and
+"relax the vtable check". The instrumentation is now done and **both of those
+follow-ups are ruled out** -- there is no back-reference to find at any region
+setting. Item 1 is not a bug fix; it is a **redesign of the resolution strategy**,
+and should be sized accordingly.
+
+Item 4 (class-anchor mode) is also affected: anchors were meant to re-derive
+`ClassPrivate` pointers after a restart, but ore nodes have no reachable
+`ClassPrivate` at all. If a record-relative EXE pointer turns out to identify the
+type, anchors may be unnecessary for these nodes.
 
 ### 11. Revised next steps -- three tracks (A blocks C)
 

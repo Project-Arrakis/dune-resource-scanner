@@ -1,0 +1,78 @@
+PID=390735
+############ Ti-FOUND (-3814,-198877) ############
+regions: exe=3 heap-like=400 (16.5 GB)
+pass1: read-error regions=2 (0.00 GB skipped)
+pass1: raw XY hits=13 distinct positions=2
+
+=== PASS-1 (raw XY transform present in scanned memory) ===
+type                      n   min-dist  <=100uu
+Ti-FOUND                  1        0.6        1
+TOTAL                     1                   1  (100.0%)
+
+pass2: rootComponent candidates=13  with>=1 pointer ref=2 (15.4%)  validated=0
+pass2: ValidateActor stage outcomes: rej-vtable=3 
+
+=== PASS-2 (fully validated actor) ===
+type                      n   min-dist  <=100uu
+Ti-FOUND                  1       +Inf        0
+TOTAL                     1                   0  (0.0%)
+
+=== OFFSET PROBE: 13 hits -> 2331 candidate object-base addresses ===
+offset probe: 0 resolutions
+most common (transformOffset, rootComponentOffset) combinations:
+
+per-marker resolution (nearest resolution within 100uu):
+  Ti-FOUND             (   -3814,  -198877) UNRESOLVED (nearest +Inf)
+
+############ Ti-MISS (-7923,-207410) ############
+regions: exe=3 heap-like=401 (16.5 GB)
+pass1: read-error regions=0 (0.00 GB skipped)
+pass1: raw XY hits=13 distinct positions=3
+
+=== PASS-1 (raw XY transform present in scanned memory) ===
+type                      n   min-dist  <=100uu
+Ti-MISS                   1        0.6        1
+TOTAL                     1                   1  (100.0%)
+
+pass2: rootComponent candidates=13  with>=1 pointer ref=3 (23.1%)  validated=0
+pass2: ValidateActor stage outcomes: rej-vtable=4 
+
+=== PASS-2 (fully validated actor) ===
+type                      n   min-dist  <=100uu
+Ti-MISS                   1       +Inf        0
+TOTAL                     1                   0  (0.0%)
+
+=== OFFSET PROBE: 13 hits -> 2331 candidate object-base addresses ===
+offset probe: 0 resolutions
+most common (transformOffset, rootComponentOffset) combinations:
+
+per-marker resolution (nearest resolution within 100uu):
+  Ti-MISS              (   -7923,  -207410) UNRESOLVED (nearest +Inf)
+
+############ Scrap-MISS (-17893,-208453) ############
+regions: exe=3 heap-like=400 (16.5 GB)
+pass1: read-error regions=2 (0.00 GB skipped)
+pass1: raw XY hits=14 distinct positions=3
+
+=== PASS-1 (raw XY transform present in scanned memory) ===
+type                      n   min-dist  <=100uu
+Scrap-MISS                1        0.8        1
+TOTAL                     1                   1  (100.0%)
+
+pass2: rootComponent candidates=14  with>=1 pointer ref=2 (14.3%)  validated=0
+pass2: ValidateActor stage outcomes: rej-vtable=3 
+
+=== PASS-2 (fully validated actor) ===
+type                      n   min-dist  <=100uu
+Scrap-MISS                1       +Inf        0
+TOTAL                     1                   0  (0.0%)
+
+=== OFFSET PROBE: 14 hits -> 2146 candidate object-base addresses ===
+offset probe: 2 resolutions
+most common (transformOffset, rootComponentOffset) combinations:
+  transformOff=1936   rootComponentOff=1104   n=1
+  transformOff=1936   rootComponentOff=1680   n=1
+
+per-marker resolution (nearest resolution within 100uu):
+  Scrap-MISS           (  -17893,  -208453) d=  0.82 tOff=1936  rcOff=1104  class=0x75fae6b16340
+
