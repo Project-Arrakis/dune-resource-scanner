@@ -28,11 +28,12 @@ process memory is the only way to see undiscovered ore nodes.
 | Capability | State |
 |---|---|
 | **Node positions, including undiscovered ones** | **Working.** ~60–64% recall, whole map, 17 s, 136 MB RSS |
-| **Node types (titanium vs scrap vs bush)** | **Unsolved. This is the blocker.** Four attribution routes ruled out |
+| **Naming a class** (this class is TitaniumOre) | **Works** — CONTINUATION §6, 1-3 confirmations per class |
+| **Typing what the census finds** | **Blocked.** Naming works via actors, but only 2.8% of markers resolve to an actor while the census reaches 72%; overlap is 0.7% |
 | Spice by tier, Flour Sand | Exact from `resourcefield_state` + `field_id` decode — **but only the inner ~87% of the map** (21-bit packing limit) |
 | Named POIs | **Complete** from `dune.markers` where `long_range=true`; scanner not needed |
 | Bases, vehicles, storage, players | Already shipped in Core |
-| Zero-player operation | **Untested.** See experiment 1 below |
+| Zero-player operation | **Proven 2026-08-24** — 64.0% coverage with nobody logged in, identical to a with-player scan |
 
 **The honest summary**: post-storm you could ship spice, flour sand, bases, POIs and an
 *unlabelled* "a resource node is here" layer. You could not say which node is Titanium.
@@ -41,14 +42,9 @@ process memory is the only way to see undiscovered ore nodes.
 
 Do these first — they are short and they change what is worth building.
 
-1. **Zero-player scan — settles the last post-storm dependency.**
-   Every scan so far ran while a session was registered `Online` on `DeepDesert_1`, even
-   when the operator was not actually playing. `dune-autoscaler` despawns a 0-player
-   instance after 300 s, and no instance means nothing to scan. Ask the operator to log
-   fully out of DD, confirm `dune admin players --online` shows nobody on that map, wait
-   past 300 s, then re-run `census.go`. If it still returns marker-validated data the
-   post-storm path needs no player; if the process is gone, the Live Map must trigger its
-   scan while someone is on the map.
+1. ~~Zero-player scan~~ — **done 2026-08-24, and it works.** Zero online players, process
+   alive past T+540 s, census returned 84,569 records at 64.0% coverage, identical to the
+   with-player run. No player dependency on the post-storm path.
 
 2. **Walk-to validation — `dune admin teleport` does NOT work.**
    Re-tested three ways on 2026-08-24 (two long-range, one 3,000 uu hop inside loaded
