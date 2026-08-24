@@ -26,7 +26,8 @@ months, which is the failure mode this file exists to prevent.
 |---|---|---|
 | Node **positions**, including undiscovered ones | ✅ **58.5–64.3%** recall, whole map. 17 s on DeepDesert, 35.8 s on Hagga | [validation](2026-08-24-validation/README.md) |
 | **Naming a resource class** (this class is TitaniumOre) | ✅ **Method works** — 1–3 confirmations per class | `CONTINUATION.md` §6 |
-| **Typing the nodes the census finds** | ❌ **Cannot** — the two channels barely overlap, see below | [issue-16](2026-08-24-issue-16/README.md) |
+| **Typing the nodes the census finds directly** (memory/code) | ❌ **Cannot** — four RE sessions, all closed; the two channels barely overlap, see below | [issue-16](2026-08-24-issue-16/README.md), [static-reverse-engineering](2026-08-24-static-reverse-engineering/README.md) |
+| **Typing nodes via bulk area discovery** (sidesteps the above) | 🔹 One event revealed 1,975 fully-typed nodes at once, area-wide — single observation, not yet a repeatable procedure | [bulk-area-discovery](2026-08-24-bulk-area-discovery/README.md) |
 | Spice + Flour Sand positions from the DB | ⚠️ Exact for every field observed; a **21-bit ceiling** exists but no field beyond it has ever been seen | [field-id-21bit](2026-08-24-field-id-21bit/README.md) |
 | Named POIs from the DB | 🔹 Every POI row is `long_range`; **completeness is inferred**, and post-storm timing is unobserved | `CONTINUATION.md` §4c |
 | Scanner works with **zero players online** | ✅ **Proven** — 64.0% coverage with nobody logged in, identical to the with-player run | [experiment](2026-08-24-validation/zero-player-experiment.txt) |
@@ -58,6 +59,17 @@ per type — unavailable at t=0 after a storm.
 
 ## Findings
 
+### 2026-08-24 — Discovery reveals a whole `area_id` zone at once, not one node at a time
+
+**[`2026-08-24-bulk-area-discovery/`](2026-08-24-bulk-area-discovery/)**
+
+| | |
+|---|---|
+| ✅ | Found live, by accident, while testing something else: discovering one `Ecolab` structure added **1,977** new rows to `dune.player_markers` for the operator, not ~1-2 |
+| ✅ | Joined the new rows back to `dune.markers`: 1,975 are ordinary, fully-typed resource nodes (every known type represented), clustered into just 4 `area_id` values -- **discovery is area-wide, keyed by `area_id`, not per-node proximity** |
+| 🔹 | Practical implication, not yet acted on: systematically flying unexplored `area_id` zones is likely a far cheaper path to a fully-typed live map than any further record-level type attribution (see the RE entry below, now closed) -- DD has 57 total `area_id`s, this one partial excursion covered 2-3 |
+| ❓ | Exact trigger boundary (structure interaction vs. just entering the zone) not isolated; generalization to Hagga or survival across a storm regeneration untested |
+
 ### 2026-08-24 — Post-storm scan hardened, tested, and actually scheduled
 
 **[`2026-08-24-storm-watch/`](2026-08-24-storm-watch/)**
@@ -69,15 +81,19 @@ per type — unavailable at t=0 after a storm.
 | ✅ | Mechanism proven live before trusting it 17 hours unattended: 5 consecutive clean firings, `dune` CLI resolving correctly under cron's minimal environment (a real, common failure mode this catches) |
 | ❌ | Two real bugs caught before deploy: a Python/bash quote-escaping mix-up that silently corrupted the first script version, and an awk permission-bit off-by-one |
 
-### 2026-08-24 — Static disassembly of the game binary: real attempt, inconclusive
+### 2026-08-24 — Static/live reverse engineering, four sessions: type attribution now genuinely exhausted, not just stalled
 
 **[`2026-08-24-static-reverse-engineering/`](2026-08-24-static-reverse-engineering/)**
 
 | | |
 |---|---|
-| ✅ | **A real, unscanned 2.13 GB of read-only anonymous memory found** -- structurally a better candidate for type tables than anything examined so far (all prior candidates were per-instance heap data) |
-| 🔹 | One of the three previously-dead EXE pointers, disassembled: a structurally FName-suggestive pattern (cached lookup index in writable memory, sentinel check, block-masked pointer reads) |
-| ❌ | The traced call resolved to a plain `libc.so.6` function, not game-specific code -- inconclusive on its own, but the structural pattern was later confirmed correct by the entry below |
+| ✅ | **A real, unscanned 2.13 GB of read-only anonymous memory found and later closed** -- searched in the namepool-decode session below |
+| ✅ | All 171 `dune` schema tables enumerated -- no analog to `resourcefield_state` exists for solid resources; the console/DB avenue is closed, architecturally, not by omission |
+| ✅ | Zero resource-name strings exist anywhere in the 374MB binary itself (checked directly) -- closes static-string-XREF entirely |
+| ✅ | `+320` confirmed a genuine, generic C++ vtable; `+336` traced further than `+280` ever did (its libc call's return value indexes a real lookup table), but the actual index requires single-stepping |
+| ✅ | Installed `gdb`, live-traced `+336` for 162s across three windows including 90s of the operator standing next to confirmed nodes -- **zero hits, every window** |
+| ✅ | **Full 48-field diff, live, of 372 matched records (pre-storm baseline vs. operator standing next to two of them): zero fields differ, anywhere** -- not just the three pointers, the complete record structure is proximity-invariant |
+| ❌ | This refutes, not just fails to confirm, the "proximity promotes a record to a nameable actor" theory below -- corrected there too |
 
 ### 2026-08-24 — The FNamePool block format: fully decoded and live-verified
 
@@ -89,7 +105,7 @@ per type — unavailable at t=0 after a storm.
 | ✅ | **Verified against 1,771 consecutive real entries, zero decode failures** -- a wrong format guess does not survive that |
 | ✅ | **Reveals the complete resource taxonomy for free**: every mineral's full `BP_<Mineral>_[Static\|Pickup\|Ore]_[A-D]_[Component\|Spawner]_C` hierarchy, confirming names this project had only inferred before |
 | ❌ | **Does not solve type attribution.** Checked both live-confirmed ground-truth records for a direct reference into this pool -- 4 and 2 matches respectively, both consistent with the ~2.7% chance-match baseline, none semantically relevant |
-| 🔹 | Refined theory, consistent with every other finding today: these records are a pre-actor "spawn slot" layer with no class identity of their own; a real, nameable actor likely only exists once something (plausibly proximity) promotes a slot |
+| ❌ | *Corrected, same day, later session*: the "proximity promotes a spawn slot to a real, nameable actor" theory these records were left on was tested directly (live `gdb` tracing plus a full-record diff, see the entry above) and **refuted**, not just left unconfirmed |
 
 
 
