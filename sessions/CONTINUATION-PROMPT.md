@@ -3,8 +3,9 @@
 Lives at `~/projects/repos/dune-resource-scanner/sessions/CONTINUATION-PROMPT.md`.
 Paste it into a fresh session, and **overwrite it in place before that session ends**.
 
-Last rewritten: **2026-08-24**, end of a long session that closed off type attribution for
-good and found something more useful instead.
+Last rewritten: **2026-08-24** (afternoon touch-up, same day as the "closed off type
+attribution" rewrite below — storm is still ~12h45m out at 15:17 PDT, used the wait to
+clear two of the "smaller open items" this file itself flagged as unverified).
 
 **Scope note**: this prompt is R&D-only — memory scanning, position-finding, validation,
 DB-structure investigation. Building the actual live map into the game server's Web Console
@@ -64,13 +65,43 @@ way? Check `~/scan-findings/storm-watch.log` on `dune-dev` and whatever
   quiet moment: Hagga's spawn-record census only ever found **112 total records** for the
   whole map (vs. DD's ~84,500) — strongly suggesting Hagga's resources are ordinary
   pre-placed level actors, not this spawn-record system at all. A Jasmine discovery there
-  would test a *different* system than everything else in this document.
-- **The `*Pickup` recall gap** (from earlier sessions, not re-verified tonight):
-  RhyolitePickup/AzuritePickup recall sat around 67% against 66-89% for ore types — a
-  second record shape was suspected as the cause. Not touched tonight; check it's still
-  accurate before acting on it.
-- **Empty-scan `[]` vs `null`** — Go nil-slice JSON marshalling bug flagged in an earlier
-  session, status not re-verified tonight.
+  would test a *different* system than everything else in this document. **Needs a human
+  operator in-game** — not something a session can drive over SSH alone; still blocked on
+  that, not re-attempted this afternoon.
+- **The `*Pickup` recall gap — re-verified this afternoon, and the earlier characterization
+  in this file was misleading.** This file previously said "RhyolitePickup/AzuritePickup
+  recall sat around 67% against 66-89% for ore types" and named those two as the anomaly.
+  Re-run against fresh data (12,906 markers, up from the 9,601 baseline;
+  `findings/2026-08-24-issue-16/tools/analyse_census.py` against a fresh whole-map census +
+  a freshly-pulled `dune.markers` snapshot — no live RE, no gdb, doesn't touch the
+  type-attribution question closed off below): **Rhyolite/AzuritePickup are not the
+  anomaly** — they track their Ore siblings normally (66.6%/67.8% vs 73.3%/77.3% Ore). The
+  real, sharp, six-way pattern:
+
+  | Type | Ore/Rock | Pickup |
+  |---|---:|---:|
+  | Titanium | 69.8% | **22.0%** |
+  | Basalt | 70.8% | **25.1%** |
+  | Bauxite | 70.2% | **27.8%** |
+  | Stravidium | 74.4% | **19.4%** |
+  | Dolomite | 89.0% | **25.3%** |
+  | Magnetite | 73.8% | **14.0%** |
+
+  Cleanly bimodal, not noise — six types sit at 14-28% against a 70-89% Ore/Rock
+  counterpart, and Rhyolite/Azurite are the sole exception. Worth a look if map-building
+  ever needs Pickup-type recall specifically, but **not investigated further this
+  afternoon** — the obvious next step (why these six and not Rhyolite/Azurite) risks
+  wanting the same static/live-RE tools the type-attribution effort already exhausted, and
+  this is a recall question, not identity, so don't assume the two investigations need the
+  same techniques without thinking it through first.
+- ~~**Empty-scan `[]` vs `null`**~~ — **Fixed this afternoon**, PR
+  [#42](https://github.com/Project-Arrakis/dune-resource-scanner/pull/42), closes
+  [#41](https://github.com/Project-Arrakis/dune-resource-scanner/issues/41). `scanSeeds`/
+  `scanProximity` declared their result slice as `var results []result` (one path
+  explicitly `return nil`), so a zero-match scan encoded as JSON `null` instead of `[]` —
+  confirmed still present, TDD'd (3 new tests, watched them fail for the right reason
+  first), fixed, merged after green CI (build/vet/test/shellcheck/gitleaks/semgrep/trivy
+  all passed on both the PR and `main` post-merge).
 
 ## Working practices that matter (accumulated across sessions, still true)
 
@@ -120,10 +151,22 @@ interface — for anything with special characters, write the SQL to a file and 
 (`dune database sql "$(cat file.sql)"`) rather than fighting `ssh` quoting. `dune-dev` is
 sanctioned for this work; `dune-prod` is not.
 
-## Repo state as of 2026-08-24, end of session
+## Repo state as of 2026-08-24, ~15:25 PDT (afternoon touch-up)
 
 `main` green, no open PRs. Merged tonight: #37 (pre-storm baseline + a real secret-exposure
 fix in `post-storm-scan.sh`), #38 (four-session static/live RE closure), #39 (bulk-area-
-discovery finding). `findings/README.md` and the root `README.md` are both current as of
-this rewrite — read `findings/README.md` first for the full, maintained index; this prompt
-is a working-session summary, that file is the source of truth.
+discovery finding). Merged this afternoon: #42 (empty-scan `null`-vs-`[]` fix, closes #41).
+`findings/README.md` and the root `README.md` are both current as of the original tonight
+rewrite — read `findings/README.md` first for the full, maintained index; this prompt is a
+working-session summary, that file is the source of truth. Neither needed a change for the
+PR #42 fix (it's a scanner-output-correctness bug, not a capability/finding).
+
+One more real, small thing found this afternoon and worth remembering: a direct `ps -eo
+pid=,rss=,args=` grep for the Overmap/DeepDesert PIDs (done to confirm the Hagga process was
+up before attempting the Jasmine test) reprinted the full launch command line — including the
+live Funcom `ServiceAuthToken` — straight into this session's own conversation transcript.
+Nothing was committed, but it's a second instance of the exact class of mistake
+`post-storm-scan.sh` was already fixed for tonight, this time in an ad hoc interactive
+command rather than a script. `ps -o pid,etime,rss,comm` (no `args`) is the safe form for a
+PID lookup that doesn't need the map name argument to disambiguate — reach for that first
+even for a one-off check, not just inside committed scripts.
