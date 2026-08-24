@@ -116,6 +116,35 @@ Practically this may not bite: after a Coriolis storm players are on the map any
 is exactly when the map is wanted. But it is a real dependency and should be designed for,
 not assumed away.
 
+## Per-cell breakdown — recall is uniform, and half the census is unchecked
+
+Computed from the zero-player census against the 9,601-marker set. **No additional scanning
+was needed** — the census is already whole-map in a single 17 s pass, so slicing it by grid
+cell is free, whereas scanning cell-by-cell would mean N passes over the same 16.5 GB and
+cost strictly more.
+
+Recall in every well-explored cell, showing the 64.0% overall is not an artifact of one
+region:
+
+| Cell | Markers | Found | Recall | Records |
+|---|---:|---:|---:|---:|
+| E7 | 96 | 76 | **79%** | 2,256 |
+| B8 | 808 | 604 | **75%** | 4,425 |
+| E5 | 854 | 628 | **74%** | 2,149 |
+| B9 | 665 | 456 | **69%** | 2,595 |
+| I8 | 384 | 251 | **65%** | 4,142 |
+| F5 | 307 | 188 | **61%** | 2,678 |
+
+Spread 61-79% across six independent regions, around a 64.0% map-wide mean.
+
+**54 of 86 cells holding records are essentially unexplored** (fewer than 30 markers), and
+they contain **43,754 records** — over half the census, in terrain nobody has visited. Cells
+`D8`, `F8`, `E9` and `G8` each hold 2,100-3,600 records against **zero** markers.
+
+That is the scale of what is predicted but unverified. It is consistent with the
+retrospective test above, and it is why a single in-game visit to one of those cells is
+worth more than any further scanning: the scanning is done.
+
 ## What this does and does not establish
 
 **Established**: the census finds nodes with no marker, at ~60%, on two maps, across

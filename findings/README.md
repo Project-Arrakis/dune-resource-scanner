@@ -80,6 +80,7 @@ an annotated memory dump, and the census. Tools: `census.go`, `analyse_census.py
 | | |
 |---|---|
 | ✅ | **Retrospective test**: 60.2% of 1,667 markers discovered *after* the scan was captured, vs 64.8% of already-known ones. **Discovery is not required** |
+| ✅ | **Per-cell recall is uniform**: 61-79% across six independent well-explored cells, around the 64.0% map-wide mean — not an artifact of one region. **54 of 86 cells are essentially unexplored and hold 43,754 records**, over half the census, in terrain nobody has visited |
 | ✅ | **Cross-map test**: the DD-derived signature gives 58.5% on Hagga — different map, authored terrain, a process that had restarted with fresh ASLR. Map- and process-independent |
 | ✅ | **Zero-player operation PROVEN** (2026-08-24, after the operator logged out). The DeepDesert process stayed alive through T+120/240/330/420/540 s with **zero** online players — well past the autoscaler's 300 s grace period — and a full census then returned **84,569 records at 64.0% marker coverage, identical to the 64.0% measured with a player online**. This corrects the earlier "untested" entry, which the operator challenged and was right to |
 | ❌ | *Corrected*: an earlier claim that unmatched records were "not all nodes" was largely wrong — the Z gap cited was mostly exploration bias |
