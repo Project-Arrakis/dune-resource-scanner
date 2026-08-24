@@ -465,7 +465,38 @@ Jasmium (Hagga only, never located).
   `game_events`. Worm presence is memory-only, and worms despawn well inside the 2-5 minute a
   scan takes, so catching one would need a fundamentally faster capture.
 
-### 6c. Correction: `dune admin teleport` does work, with a delay
+### 6c. RE-CORRECTED 2026-08-24: `dune admin teleport` does NOT work
+
+**Read the 2026-08-24 re-test below before the 2026-08-22 correction that follows it.**
+
+Tested directly with the operator stationary at their DD base, position read from
+`dune.actors` (live -- it tracked their flight earlier in the same session):
+
+| Test | Target | Result |
+|---|---|---|
+| Long range, unexplored terrain | `-202619 205177 2180` | `publish=ok`, exit 0, **no movement in 40s** |
+| Long range, second target | `-198858 202322 1840` | `publish=ok`, exit 0, **byte-identical position across 36s** |
+| **Short hop, 3,000 uu, inside loaded terrain** | `-630899 -636683 4400` | `publish=ok`, exit 0, **no movement in 24s** |
+
+Every attempt was accepted by RabbitMQ (`TeleportTo command accepted by
+rabbitmq-game:heartbeats/notifications`, exit 0) and **none moved the character**.
+Distance and streaming are ruled out by the 3,000 uu hop inside terrain the player was
+standing in. The read path is known good: the same command tracked the operator's
+position across a 380,000 uu flight minutes earlier.
+
+**So the original "accepted but never moves" finding was right, and the 2026-08-22
+correction below is wrong** -- or the behaviour regressed between 2026-08-22 and
+2026-08-24. What the 2026-08-22 session actually observed (the operator arriving 0.2 m
+from a `RhyolitePickup` marker) is not disputed; the inference that the teleport caused
+it is. An operator flying is indistinguishable from a teleport if position is only
+sampled before and after, which is exactly the trap the 2026-08-22 note warned about in
+the other direction.
+
+**Practical consequence: do not plan any validation that depends on teleporting the
+operator.** Ground-truth checks need the operator to travel there, so pick targets near
+where they already are.
+
+### 6c-old (2026-08-22, SUPERSEDED -- see above). Correction: `dune admin teleport` does work, with a delay
 
 This document previously recorded admin teleport as accepted by RabbitMQ but never moving the
 character. **That is wrong, or at least no longer true.** A teleport issued this session

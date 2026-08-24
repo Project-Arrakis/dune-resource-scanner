@@ -126,6 +126,11 @@ whose instance despawned silently vanishes from the map.
 
 ## Working practices that matter
 
+- **`dune admin teleport` does not work** (re-tested 2026-08-24 at long range, a second
+  long-range target, and a 3,000 uu hop inside loaded terrain -- all `publish=ok`, exit 0,
+  zero movement). §6c's 2026-08-22 "it works with a delay" correction is wrong or the
+  behaviour regressed. **Do not plan validation that depends on teleporting the operator**
+  -- pick targets near where they already are.
 - **Operator must be stationary before any scan.** The scanner reads `-near` at launch and runs
   2–5 minutes. Two scans were wasted when the operator travelled mid-scan and the empty results
   looked like real negative findings.
