@@ -1,12 +1,34 @@
 # Continuation: Dune Awakening raw-resource discovery → Live Map integration
 
 ## Goal
-Find real world positions for Dune Awakening's raw resources (spice + an unidentified
-second resource + ore/stone/fiber types), then integrate them into the Live Map feature of
-`yacketrj/dune-awakening-selfhost-docker` (org is actually **Project-Arrakis** on GitHub —
-`git remote -v` confirms `origin = github.com/Project-Arrakis/dune-awakening-selfhost-docker`,
-contradicting some stale references elsewhere). Currently mid-build on a permanent Go tool,
-`dune-resource-scanner`, to replace a Python prototype that hit a real performance wall.
+
+**Produce a complete map of Deep Desert's resources and POIs immediately after a Coriolis storm
+regenerates it**, so players know where to go for resources, ships, spice and stations without
+having to re-explore the whole map first. That is the product requirement everything else serves.
+
+The consequence, stated up front because it invalidates the obvious design: the game's own
+`dune.markers` table is **discovery-driven** and is empty right after a wipe, so a database-backed
+map can only ever report what somebody already found. **Reading the live server's process memory
+is the only way to see undiscovered nodes**, which makes `dune-resource-scanner` — and
+specifically its recall bug,
+[#16](https://github.com/Project-Arrakis/dune-resource-scanner/issues/16) — the critical path.
+See section 10 for the full reasoning and section 11 for the current next steps.
+
+Delivery target is the Live Map feature of `Project-Arrakis/dune-awakening-selfhost-docker`
+(some older references say `yacketrj/*`; `git remote -v` confirms the org is **Project-Arrakis**).
+No Core code has been written yet — all work so far is investigation. The scanner is a permanent
+Go tool, clean-room, replacing a Python prototype that hit a real performance wall.
+
+**Read section 10 before anything else if you are picking this up fresh** — several earlier
+sections were written before the post-storm requirement was stated and reach conclusions it
+overturns.
+
+**Where the paperwork lives.** This file is the single living document — every claim in it is
+kept current, and corrections are made in place. Alongside it, [`sessions/`](sessions/) holds the
+handoff prompt for the next session (`sessions/CONTINUATION-PROMPT.md`, overwritten each time)
+and dated, append-only point-in-time records (`sessions/YYYY-MM-DD-findings.md`). Raw scan output
+and captures go in [`findings/`](findings/). **None of these ever go in `/tmp`** — it is `tmpfs`
+on these hosts, so anything a future session needs to find would not survive a reboot.
 
 ## Session 2 update (2026-08-21, later same day) — v1 core implementation shipped
 - Repo created for real: **`Project-Arrakis/dune-resource-scanner`, private** (user confirmed
@@ -142,25 +164,605 @@ suggesting they're sibling actor roles of the *same* resource family, spawner/pi
 per the `BP_<Mineral>_Spawner`/`BP_<Mineral>_Pickup_[A/B]_Spawner`/`BP_<Mineral>_Component`
 pattern found in session 1 — not 25 independent resource types).
 
-## Immediate next step for the next session
-1. **Get one real identity confirmation** — walk to the closest Titanium candidate (8166 units
-   from base) and visually confirm, or pick any other listed position and confirm whatever it
-   actually is. One confirmed class pointer, cross-referenced by pointer-prefix family against
-   `findings/2026-08-21-base-island-survey.json`, likely resolves several of the 26 unidentified
-   classes at once (see the sibling-actor-role reasoning above).
-2. If pursuing FName resolution instead of a visual check: don't guess offsets/encoding blind.
-   Start by finding a way to verify each assumption against something already known (e.g., can
-   the `UObject::NamePrivate` field be found empirically by testing candidate offsets on the
-   *known* spice-small class pointer, `0x75c26017b270`, and checking whether the decoded name
-   plausibly contains "Spice"?) before trusting any result for an unknown class.
-3. Keep trying to catch a `field_kind_id=0` (`mystery`) field while active for in-person ID —
-   the seed-mode scan already gives live positions for all 533, so this is now much easier than
-   session 1's approach (teleport is still unreliable; give the closest live position to
-   wherever the player already is).
-4. Once enough positions + names are solid, design and implement the real Live Map integration
-   in `dune-awakening-selfhost-docker` (new branch, new `console/api` route reading the
-   scanner's output, new marker/layer type with an `overlays`-based freshness indicator per the
-   design constraints below).
+## Session 3 (2026-08-22) — "mystery" identified, `field_id` decoded, ore classes named
+
+**Read this section before acting on anything above it — several session-2 conclusions are
+superseded here.** Everything below was verified live against `dune-dev` (PID 1270301,
+DeepDesert_1 partition 8) in the same session it was written.
+
+### 1. `field_kind_id = 0` is **Flour Sand** — CONFIRMED, twice, independently
+
+- Operator stood **4.5 m** from the memory-scanned position `(-638575, -536975)` with flour sand
+  directly beneath them.
+- `dune.markers` contains a `FlourSand` row at **exactly** that coordinate (Z 1446 vs scan 1447).
+
+The session-2 note above that "ruled out" a spice relationship was rejecting a *different*
+hypothesis — "inactive spice that flips to `field_kind_id=1`" — and remains correct on its own
+terms. Flour Sand being its own separate resource is consistent with all four of its points
+(distinct class pointer, constant non-spice value, own active/dormant cycle, comparable
+population). Stop calling this "mystery".
+
+### 2. `field_id` is a packed 21-bit coordinate triple — the single most useful finding
+
+```
+x =  id        & 0x1FFFFF
+y = (id >> 21) & 0x1FFFFF
+z = (id >> 42) & 0x1FFFFF
+for each: if v > 0xFFFFF: v -= 0x200000
+```
+
+Raw decoded values are world units — **no scaling**. Verified against memory-scan ground truth:
+**spice 53/57 exact XY matches, flour sand 45/59**.
+
+**Consequence: active spice and flour-sand positions can be read straight from Postgres.** The
+memory scanner is *not* required on the Live Map's data path. Decode from string/BigInt —
+`field_id` exceeds `Number.MAX_SAFE_INTEGER` and a JS `Number` silently loses low bits.
+
+### 3. Resource positions are static per map and identical across instances
+
+Full set diff of two independent DeepDesert processes (partition 32 vs partition 8):
+flour sand 533/533, spice-small 281/281, spice-medium 89/89 — **zero differences**. A single scan
+is therefore valid for every instance, and does not go stale when an instance respawns.
+
+### 4. Memory holds candidate pools; the DB holds the active subset
+
+| Map | Flour Sand active | Spice active | Flour in memory | Spice in memory |
+|---|---|---|---|---|
+| DeepDesert | 59 | 56 | 533 | 376 |
+| HaggaBasin | 17 | 4 | not scanned | not scanned |
+
+This is what makes the operator's "solid = active, faded = inactive candidate" product ask
+implementable. Flour sand candidates sit on a strict **6,350 UU (63.5 m) grid** (all 277 distinct
+X and 247 distinct Y values are exact multiples apart) with terrain-following Z; spice is
+free-placed (GCD 25) and **never** shares a position with flour sand (0 of 376 coincide).
+
+### 5. `dune.markers` — a named POI/ore atlas, but **discovery-driven, not complete**
+
+1,251 rows (DeepDesert 440, HaggaBasin 752), composite type `(type, x, y, z)`, joinable via
+`dune.map_names`. Contains real named ore veins, pickups, scrap, shipwrecks, caves, sietches,
+vendors, trainers and hazards. `dune.player_markers` (2,279 rows) tracks per-player discovery.
+
+**Critical caveat — this table is populated live as players explore, and is never complete.**
+Demonstrated directly this session rather than inferred: DeepDesert marker count went from **440
+to 537** (and the whole table from 1,251 to 1,358) *during a single session* while the operator
+flew around one grid cell. Mapping markers onto the 9×9 grid before and after:
+
+| Cell | discovered (before → after) | long_range |
+|---|---|---|
+| F-4 | **0 → 87** | 1 |
+| E-4 | 0 → 7 | 0 |
+| F-5 | 0 → 2 | 0 |
+| G-3 | 184 | 0 |
+| A-2 | 171 | 5 |
+| D-1 | 45 | 1 |
+| H-3 | 31 | 0 |
+| A-5, A-8 | 0 | 1 each |
+
+The mechanic is the **`long_range` boolean column**, not geography:
+- `long_range = true` (TaxiService ×3, Ecolab ×3, Cave ×2, Shipwreck ×1) — present without ever
+  visiting. This is why cells the operator has never entered (A-5, A-8) still hold a TaxiService.
+- `long_range = false` (all 527 ore/pickup/scrap/bush rows) — appear only once discovered up close.
+
+**Never present `dune.markers` to players as an exhaustive atlas.**
+
+### 5b. `area_id` decodes Deep Desert's prefab layout — and locates Imperial Testing Stations
+
+`dune.markers.area_id` is a **foreign key into `dune.map_names.map_name_id`**, and it reveals that
+Deep Desert is assembled from prefab "content block" islands, roughly one per 9×9 grid cell:
+
+| Cell | `area_id` | Prefab (`map_names`) | Markers |
+|---|---|---|---|
+| F-4 / F-5 | 30 | **ClosedOffTestingStationIsland** | 92 |
+| G-3 | 26 | FallenLight | 180 |
+| A-2 | 11 | HaggaBasin | 175 |
+| D-1 | 17 | ElectricityDungeon | 46 |
+| H-3 | 46 | *(no map_names row)* | 31 |
+| E-4 / F-4 | 41 | *(no map_names row)* | 19 |
+| A-1 | 13 | ErythriteCaveIsland | 1 |
+| A-8 | 2 | WaterFat | 1 |
+| A-5 | 65 | *(no map_names row)* | 1 |
+
+**An Imperial Testing Station is a cell whose prefab is `ClosedOffTestingStationIsland`.**
+Confirmed live: the operator stood inside a testing station and their position resolved to the
+`area_id=30` region, which also contains the only DeepDesert `Ecolab` marker in that area
+(`-201473, -214617`, `area_radius=30000`). In DB terms a station presents as an `Ecolab` marker
+inside an `area_id=30` region.
+
+Testing stations have **no dedicated marker type** — searching all 88 marker types across every
+map returns nothing station-like — and no row in `encounters_static` (empty) or any table/column
+matching `%station%`/`%testing%`/`%facility%`. Only one station is currently discovered; the
+operator reports there should be roughly ten (about four active, the rest present but
+inaccessible), which the discovery mechanic above fully explains.
+
+In memory a station is unmistakable **while a player is inside it**: a scan centred on the
+operator standing in one returned 1,640 actors in a 120 m box, **1,505 of them underground**
+(Z ≈ −2,200) across 241 classes. The two dominant classes (`0x7cff8a0c1380`, `0x7cff4ab11bc0`) are
+**generic structural/ruin pieces** also found around Shipwreck and Ecolab markers elsewhere, so
+they identify "a built interior", not a station specifically.
+
+### 5c. Structure geometry is streamed; resource actors are resident — tested, not assumed
+
+An idea proposed and then **disproven the same session**: enumerate every testing station by
+scanning the whole map for underground (Z < 0) clusters. It does not work, and the reason matters
+for anything built on the scanner.
+
+A human-produced map places DeepDesert stations at D-4, F-4/5, D-5/6 and F-7/8. Our one
+DB-discovered station (`area_id=30`) is in F-4/5, matching that map exactly — good independent
+validation of the grid calibration. A targeted scan of the **D-4** cell (2.7 km box) was then run
+to see whether an *undiscovered* station shows up in memory:
+
+| | D-4 (no player present) | F-4 station (player inside) |
+|---|---|---|
+| Total actors | 863 | 1,640 |
+| **Named resource actors** | **39** | 6 |
+| **Underground structural actors** | **0** | **1,505** |
+
+The inversion is the finding:
+
+- **Resource actors are resident map-wide with no player anywhere near.** D-4 returned 10
+  TitaniumOre, 10 StravidiumOre, 10 ScrapMetalWreckage, 6 BauxiteOre and 3 RhyoliteOre from
+  ~27 km away, all identified by class pointer. **Full-map resource mapping via the scanner
+  works.**
+- **Structure geometry is streamed per-player and is absent otherwise.** The station interior
+  existed in memory only because the operator was standing in it. D-4's station, if it has one,
+  simply is not loaded.
+
+**Consequence: the scanner cannot enumerate unoccupied structures.** Stations, caves, ecolabs and
+shipwrecks are findable only via the DB's discovery mechanic or by a player physically going
+there. Do not build a POI layer that claims completeness. Resource layers have no such limit.
+
+(The 2 "underground" hits D-4 did return sit at exactly X=-304800, Y=101600 with an identical Z —
+the same grid-round signature as the bogus `spice-large` hits, i.e. false positives, not a
+structure. Also note D-4's 10/10/10 resource counts are suspiciously round and were not
+cross-checked against markers; treat per-cell counts as unverified until they are.)
+
+Related unexplored lead: `dune.actor_spawners` holds 14 `CB_WreckedShip_Medium_001` entries for
+DeepDesert (10 in `dimension_index=0`, 4 in `dimension_index=1`, the latter a strict subset)
+against only 1 discovered `Shipwreck` marker — so that table may hold a *complete*,
+discovery-independent encounter list. It has no position columns, and its `id` is a small
+sequential integer (not packed coordinates like `field_id`), so positions would have to come from
+elsewhere.
+
+**The architecture this implies — use both sources for what each is good at:**
+the scanner yields *complete* positions but no names; `dune.markers` yields *names* but only where
+explored. Identify a **class pointer** once from any single discovered marker (section 6), and
+every instance of that class map-wide inherits the name — **including in cells nobody has ever
+visited**. This was demonstrated directly: a scan of F-4 found 7 TitaniumOre, 6 StravidiumOre,
+8 ScrapMetalWreckage, 3 BauxiteOre, 1 Shipwreck and 1 RhyoliteOre **by class pointer**, at a
+moment when `dune.markers` still listed zero markers for that cell.
+
+Semantics (confirmed by operator): `*Ore` = the minable vein; `*Part`/`*Pickup` = the small
+hand-collected chunks.
+
+### 6. Class pointer → resource name, established without any in-game visual check
+
+Method: scan a coordinate that `dune.markers` *already labels*, and whatever class appears there
+is that resource. Sub-metre position matching makes this unambiguous. **This supersedes the
+session-2 plan of walking to candidates in-game, and makes the FName/`FNamePool` reverse
+engineering unnecessary** — do not spend time on that.
+
+| Class pointer (PID 1270301, ASLR-specific) | Resource | Best match | Confirmations |
+|---|---|---|---|
+| `0x7cfef4325730` | TitaniumOre | 0.08 m | 3 |
+| `0x7cfef432bb90` | StravidiumOre | 0.06 m | 2 |
+| `0x7cfef55052a0` | BauxiteOre | 0.38 m | 1 |
+| `0x7cfeef5b0080` | RhyoliteOre | 0.25 m | 1 |
+| `0x7cfc3f390700`, `0x7cfc44d23730` | RhyolitePickup | 0.04 m | 2 |
+| `0x7cfc32810cd0`, `0x7cfc328120b0` | ScrapMetalPart | 0.27 m | 2 |
+| `0x7cfef23bb270`, `0x7cfef23ba030`, `0x7cfef23b2500` | ScrapMetalWreckage | 0.05 m | 3 |
+| `0x7cff4a976b80` | **generic long-range POI beacon** — *not* a single resource, see below | 0.00 m | 3 |
+
+**Correction, found the same session:** `0x7cff4a976b80` was initially recorded as "Shipwreck" on a
+0.00 m match. That was wrong — a nearest-marker-wins match hid a genuine ambiguity. Enumerating
+all three of its instances shows one sits on a `Shipwreck` marker and **two sit on `Ecolab`
+markers**, all at 0.00 m. It is a class common to `long_range=true` discoverable POIs
+(Shipwreck / Ecolab / Cave), not a resource type. **Lesson for anyone extending the table: check
+every instance of a class against the marker set, not just its single closest match** — a class
+present at several *different* marker types is a generic role, and reporting its best match as an
+identification is exactly the kind of confidently-wrong labelling this whole approach exists to
+avoid.
+
+Pointers are per-process (ASLR) — re-derive them after any restart; the *method* is what carries
+over. Families cluster by memory pool (`0x7cfef432****` = Ore types, `0x7cfef23b****` = Scrap
+Wreckage), confirming session 2's sibling-actor-role reasoning: many of the "26 unidentified
+classes" are sibling roles of the same resource, not distinct resources.
+
+**False-positive warning:** `0x7cfee8b30510` and `0x7cff4a926080` matched TitaniumOre at 0.86 m
+but are the **player's own character and controller** — the operator was standing beside the vein.
+Always exclude actors sitting at the player's live position before drawing conclusions.
+
+### 6b. Inventory diffing — a better identification channel than scanning
+
+Found late in the session and **preferable to memory scanning for resolving internal item names**:
+snapshot `dune.items` joined to `dune.inventories`, have the operator gather one node, diff.
+It is instant, exact, costs no CPU on the game server, and cannot produce the false positives
+scanning does.
+
+Confirmed live: the operator reported "504 iron ore", and the diff showed **`MagnetiteOre` 504**
+appear, then 512 when they gathered eight more. **`MagnetiteOre` = "Iron Ore"** — settled from the
+item side with zero inference, independently confirming the note in Core's own
+`BaseInventoryTab.test.tsx`. This also validates the whole naming convention: **the game uses real
+mineral chemistry internally and display names externally**, which makes the Bauxite→Aluminum,
+Azurite→Copper and Dolomite→Carbon mappings far safer to rely on.
+
+**`Rhyolite` = "Granite Stone"** — confirmed the same session by teleporting the operator to a
+`RhyolitePickup` marker (they landed 0.2 m from it) and having them report what they were standing
+on. This had been flagged twice as an unverified guess, with Basalt named as the plausible
+alternative; it is now settled. Note the *node* types are distinct (Rhyolite vs Basalt) while the
+*item* both drop is the generic `Stone` template — which is why gaming.tools lists "Granite Stone"
+and "Basalt Stone" separately but inventories only ever show `Stone`.
+
+**Two traps in the diff method, both hit live:**
+- **Items leave the player's inventory.** Filtering on `i.actor_id = <player>` showed iron
+  *vanishing* after a gather, because the operator had dropped it. Order by
+  `dune.items.acquisition_time` instead — it cuts through inventory moves and shows exactly what
+  was acquired and when, regardless of where it ended up.
+- **Dropped items become a real actor.** They land in a
+  `/Game/Dune/Systems/Looting/BP_LootContainer.BP_LootContainer_C` — a backpack on the ground —
+  with its own row in `dune.actors` (live transform), `dune.inventories`, and full contents in
+  `dune.items`. **Dropped loot is therefore fully DB-tracked and needs no memory scanning at all**,
+  unlike hidden treasure or testing stations. A dropped-loot map layer would be trivial and exact.
+
+### 6d. Confirmed node -> item -> display names (inventory diff, 2026-08-22)
+
+Every row below was confirmed by the operator gathering a single node and diffing
+`dune.items`; quantities matched what they reported in-game exactly.
+
+| Node / marker | Item `template_id` | In-game display |
+|---|---|---|
+| `AzuriteOre` | `AzuriteOre` | **Copper Ore** |
+| `MagnetiteOre` | `MagnetiteOre` | **Iron Ore** |
+| `ErythriteOre` | `ErythriteCrystal` | Erythrite Crystal |
+| `BrittleBush` | `PlantFiber` | Plant Fiber |
+| `RhyoliteOre` / `RhyolitePickup` | `Stone` | **Granite Stone** |
+| `FuelCellPart` | `Oil` | **Fuel Cell** |
+
+**`Oil` displays as "Fuel Cell", NOT "Impure Fuel"** (operator-confirmed). This matters: earlier
+notes in this session assumed `FuelCellPart` was the gaming.tools "Impure Fuel" entry. It is not.
+**Impure Fuel is still unidentified** and has no known node type — treat it as outstanding
+alongside Jasmium.
+
+**Node name, item name and display name are three independent things.** All four combinations
+occur: name carried through unchanged (`AzuriteOre`), mineral name internally with a different
+display (`MagnetiteOre` -> "Iron Ore"), node name changed for the item (`ErythriteOre` ->
+`ErythriteCrystal`), and a generic shared item across distinct node types (`Rhyolite*` and
+`BasaltOre` both -> `Stone`). **Never infer one from another** -- gather and diff. Inferring from
+mineral chemistry alone would have produced at least one confident error (Erythrite is a cobalt
+mineral, but yields `ErythriteCrystal`, not a cobalt item).
+
+Still unconfirmed by item as of this writing: `Dolomite*` (Carbon Ore, marker only),
+`BasaltOre`/`BasaltPickup`, `TitaniumOre`, `StravidiumOre`, `BauxiteOre` (strong class matches but
+never gathered), `ScrapMetalPart` vs `ScrapMetalWreckage` (no clean single-variable gather), and
+Jasmium (Hagga only, never located).
+
+### 6e. Sandworms, sandstorms and the Coriolis seed
+
+- **Coriolis seed is readable from the DB** via `dune.debug_get_coriolis_seeds()` -- DeepDesert
+  and HaggaBasin both seed `2` at time of writing, matching the seed gaming.tools' API uses.
+  Related functions exist: `coriolis_update_seed`, `coriolis_cleanup_partition`,
+  `update_coriolis_for_player`, `coriolis_cleanup_farm`. **A seed change is the signal that the
+  map has regenerated** -- the natural trigger for a full re-scan after a Coriolis storm.
+- **Ordinary sandstorms do not change the seed** (verified across one live storm) and are not
+  tracked in any table. They are visible only indirectly, as `game_events` `event_type=13` rows
+  with `m_TotemShieldStateChangedReason: "Sandstorm"` -- i.e. only where a player owns a structure
+  the storm passes over. Three clean Disabled -> Restored pairs on 2026-08-22 give a consistent
+  duration of **~7 minutes**; the irregular gaps between them (1h to 8h) reflect storms that
+  spawned elsewhere and missed the totem, not irregular timing.
+- **Sandworms are not tracked at all.** Checked live while one was active: no worm actor in
+  `dune.actors` (the only sandworm match is a decorative statue placeable), and no worm row in
+  `game_events`. Worm presence is memory-only, and worms despawn well inside the 2-5 minute a
+  scan takes, so catching one would need a fundamentally faster capture.
+
+### 6c. Correction: `dune admin teleport` does work, with a delay
+
+This document previously recorded admin teleport as accepted by RabbitMQ but never moving the
+character. **That is wrong, or at least no longer true.** A teleport issued this session
+(`DUNE_ADMIN_ASSUME_YES=1 dune admin teleport '<fls-id>' -812980 495 -1200`) was initially judged
+broken because an immediate position re-read returned byte-identical coordinates — but the
+operator did in fact arrive, landing 0.2 m from the target marker. **The position check was simply
+made too soon.** Wait several seconds and re-read before concluding a teleport failed. The earlier
+"confirmed broken" finding should be treated as suspect for the same reason.
+
+### 7. Corrections to third-party claims that entered this session
+
+Pasted reference material was **right** about `field_kind_id=0` = Flour Sand and the `field_id`
+packing, but **wrong** about: 23,413 marker rows (real: 1,251), `AzuriteOre` 3,067 (real: 6),
+`Shipwreck` 30 (real: 14), and `game_events.event_type=0` = "devoured by Shai-Hulud" (real:
+`event_type=13` is base totem shield state). Its Leaflet `coordScaleX`/`coordOffsetX` calibration
+constants do **not** match Core at all — Core uses `LIVE_MAP_CONFIGS` min/max bounds
+normalisation on 4096×4096 images (`duneDb.js`, `worldToLiveMapPoint` in `LiveMapPanel.tsx`).
+Treat that whole document as unverified: some of it is accurate, much of it is not.
+
+### 8. Open items
+
+- 14 of 59 active flour-sand fields decode to positions **absent** from the memory scan's 533 —
+  the scan under-counts. Cause unknown. Not blocking, since the DB is authoritative for active
+  fields.
+- The 6 `spice-large` memory hits look like false positives (grid-round coordinates
+  -304800/-1016000/0, identical Z of -4143.93). The DB reports only 2 active large fields, both
+  of which decode correctly.
+- `ValidTransform` accepts denormal near-zero coordinates → garbage hits. Filed as issue #14.
+- Core bug (different repo): `liveMapBases()` filters `coalesce(a.partition_id,0) > 0`, so a base
+  whose instance has despawned (NULL partition — observed live this session) **silently vanishes
+  from the Live Map**.
+- Sandworm spawns and the desert mouse: no data source found in any table checked. Parked.
+  (Imperial Testing Stations were resolved later the same session — see 10c.)
+
+### 10. THE ACTUAL GOAL, and why it reframes everything above
+
+Stated explicitly by the operator late in the session, and it invalidates any DB-only design:
+
+> the whole point is to find everything **after the storm** so players can easily know where to go
+> for resources, ships, spice, stations
+
+A Coriolis storm regenerates Deep Desert. `dune.markers` is **discovery-driven**, so at that moment
+it is empty and stays empty until players re-explore — it can only ever report what somebody has
+already found. **The memory scanner is the only source that can see undiscovered nodes.** Its
+recall is therefore not a limitation to design around; it is the critical path, and
+[issue #16](https://github.com/Project-Arrakis/dune-resource-scanner/issues/16) is the blocking
+defect for the entire project.
+
+The two sources are **sequential, not competing**:
+- **`dune.markers` is the Rosetta Stone.** The only source with a name *and* a position, so the
+  only thing that can attach a real name to a memory class pointer. Discovery-driven is fine for
+  that job — each resource type only has to be found **once, ever**.
+- **The scanner is the map-wide instrument.** Once a class is named, it finds every instance
+  anywhere, including on day zero after a wipe when markers are empty.
+
+### 10a. Class pointers are disposable — use anchor positions instead
+
+Class pointers are **per-process and per-restart**, and do not transfer between maps. Hagga runs
+as `Survival_1`, DeepDesert as `DeepDesert_1` — separate processes, independent ASLR. Worse,
+`ClassPrivate` is a runtime heap allocation, so even an offset-from-module-base would not be
+stable. And the obvious workaround fails: both the actor's vtable and the UClass's own vtable
+point into the main binary at fixed offsets, but **every Blueprint actor shares the same C++
+type**, so vtables cannot discriminate `TitaniumOre` from `StravidiumOre`.
+
+**Solution: store anchors, not pointers.** Record *"whatever class sits at (X, Y) is
+TitaniumOre"*, and have the scanner probe those anchors at startup to rebuild the table itself.
+- **Hagga anchors are permanent** — it is authored terrain, so node positions never move.
+- **DD anchors rebuild per storm**, but cheaply: only **one discovered node per resource type** is
+  needed to reseed, not a full re-exploration.
+
+This makes issue #16 doubly critical — anchor re-derivation only works if the scanner reliably
+finds the node sitting at a known anchor, which it currently does about two times in five.
+
+### 10b. Authored vs procedural: readable straight from the DisplayName
+
+A clean, queryable discriminator found by comparing DD's static A-row wrecks with the dynamic
+G-7 cluster:
+
+| DisplayName pattern | Meaning |
+|---|---|
+| Descriptive (`Shield_Wall_ShipWreck_01`, `Shield_Wall_Cave_06`, `Shield_Wall_ECOLAB_013`) | **authored terrain — permanent, survives a storm** |
+| Bare uppercase (`SHIPWRECK`, `CAVE`, `ECOLAB`) | **procedurally placed — re-rolled each Coriolis cycle** |
+
+So the Live Map can cache authored POIs permanently and only re-discover/re-scan the generic ones.
+
+The same split explains the two maps: **Hagga is authored, Deep Desert is procedurally assembled.**
+Hagga's spawner names carry real regions and features
+(`Survival_1_Graben_..._TP_PinnacleStation`, `Survival_1_RedD_..._CB_RedDesert_Landmark_Mirzabah`),
+while DD's carry only a numbered slot (`DeepDesert_1_CB_WL_<N>`). That is why DD resets and Hagga
+does not.
+
+### 10c. Imperial Testing Station = the `Ecolab` marker type
+
+Proven by the DisplayName payload on HaggaBasin's Ecolab markers, which read literally
+`Survival_ShieldWall_ImperialTestingStation1/2/3`,
+`Survival_HaggaRift_ImperialTestingStation1/2`,
+`Survival_JabbalEifrit_ImperialTestingStation1/2/3`,
+`Survival_VermiliusGap_ImperialTestingStation1/2/3`. **This supersedes the earlier conclusion in
+section 5b that testing stations have no marker type** — they do, it is `Ecolab`. The DD station
+the operator entered (F-4, `area_id 30`) is an `Ecolab` marker too, just with the generic
+`ECOLAB` display string. Note `Ecolab` is broader than testing stations (it also covers
+`Survival_Oodham_Outpost5/6`), so the payload name is what disambiguates.
+
+### 10d. Shipwrecks: 10 slots, 4 active, and `actor_spawners` is discovery-independent
+
+`dune.actor_spawners` lists content-block spawners **regardless of discovery** — the one POI
+source immune to the marker problem. For DeepDesert:
+
+| dimension_index | Slots | `CB_WL_` indices |
+|---|---|---|
+| 0 | 10 | 35, 77, 85, 132, 166, 167, 191, 212, 236, 295 |
+| 1 | **4** | 166, 167, 212, 295 (a strict subset) |
+
+The operator independently reports **4 dynamic wrecks in rows B–I** (plus the 3 authored
+`Shield_Wall_*` ones in the A row), matching dimension 1 exactly — the same
+candidate-pool/active-subset architecture as flour sand (533/59) and spice (376/56).
+
+**`CB_WL_<N>` cannot be decoded to coordinates.** The slot's position is generated per Coriolis
+seed, so the same WL sits somewhere different after each storm; `actor_spawners.id` is a plain
+sequential integer, not packed coordinates (checked). What the table *does* give, discovery-free:
+how many wrecks exist this cycle, which slots are in play, and a change signal when the layout
+regenerates.
+
+### 10e. Ore vs Pickup answered, and three more item names
+
+**`*Ore` and `*Pickup` yield the same item; only the quantity differs.** Settled with Basalt,
+the first clean single-variable test (previous attempts were spoiled by pre-existing stock):
+`BasaltPickup` gave `Basalt` x4, then `BasaltOre` gave `Basalt` x234 from the same stack. So the
+`*Ore` types identified only by class can safely inherit their `*Pickup` counterpart's item name.
+
+| Node | Item `template_id` | Display | Note |
+|---|---|---|---|
+| `BasaltOre` / `BasaltPickup` | `Basalt` | Basalt Stone | **distinct from `Stone`** |
+| `SaguaroSeed` | `SaguaroResourceRaw` | **Agave Seed** | all three names differ |
+| `PrimroseField` | **none** | (dew / water) | see below |
+
+Two predictions were made and **both were wrong**, which is worth recording because it is now a
+consistent pattern: Basalt was predicted to yield the generic `Stone` (it does not -- `Stone` is
+specifically Granite), and Saguaro was predicted to yield `AgaveSeed` (it yields
+`SaguaroResourceRaw`). Together with the earlier cobalt-for-Erythrite and Impure-Fuel-for-Oil
+misses, that is **four failed template predictions out of four attempts**. Never infer; gather.
+
+### 10f. Primrose: the first resource this methodology cannot reach
+
+`PrimroseField` is Hagga-exclusive flora harvested for dew, using a `DewReaper` tool. Harvesting
+it produced **no inventory item at all** -- `dune.items` is unchanged before and after -- and
+`dune.player_state` has **no water/hydration column** (every column was listed and checked). The
+water goes into client/memory character state that is never persisted.
+
+**So it is invisible to both the inventory diff and the database.** This is a genuine boundary,
+not a gap to be closed: there is nothing to read. A Live Map can still show *where* Primrose
+fields are (they have markers), but nothing about yield or state -- unlike spice and flour sand,
+where `resourcefield_state` carries exact live values. Any resource taxonomy must allow for this
+category.
+
+Related: the gaming.tools list of 14 raw resources is a **minerals/materials** list and is not
+exhaustive for gatherables. Water-bearing flora and seeds do not appear on it.
+
+### 10g. Hagga regions come from marker payloads, not `area_id`
+
+Hagga is divided into named regions the player is notified of on entry. They are extractable from
+the `Survival_<Region>_` fragment of `dune.markers.payload->>'DisplayName'`:
+
+| Region | Named markers |
+|---|---|
+| VermiliusGap | 68 |
+| HaggaBasinSouth | 42 |
+| HaggaRift | 35 |
+| JabbalEifrit | 29 |
+| ShieldWall | 27 |
+| Oodham | 21 |
+| Sheol | 12 |
+
+Seven discovered; the operator reports about nine, and `Graben` and `RedD` both appear in spawner
+names without marker payloads yet, so those are most likely the missing two.
+
+**Only POI markers carry region names.** Resource markers (ore, pickup, bush) have an empty `{}`
+payload, so entering a new region and mining reveals nothing -- a *named* POI (Cave, Ecolab,
+Sietch, Shipwreck) must be discovered there. This was confirmed live: Hagga's marker count went
+861 -> 2,746 while the operator explored two new regions, and the region list did not change.
+
+**Normalise before grouping.** The game's own strings are inconsistently spelled:
+`ShieldWall` (24) vs `Shieldwall` (3), and `VermiliusGap` (66) vs `VermilliusGap` (2, double-L).
+A naive `GROUP BY` invents phantom regions.
+
+**Correction to 5b: `area_id` is NOT a reliable foreign key into `map_names`.** In DeepDesert the
+matches looked convincing (`ClosedOffTestingStationIsland` sat exactly on the real testing
+station, plus `WindPass`, `FallenLight`, `ErythriteCaveIsland`), but in HaggaBasin the same join
+resolves to nonsense -- `area_id 12` -> "ArtOfKanly", a story map, with 205 markers. Several DD
+`area_id` values (41, 42, 46, 47, 55, 58, 59, 65, 71, 81) resolve to nothing at all. **The DD
+matches were probably coincidental ID collisions and were over-trusted.** `area_id` still groups
+markers into real spatial blocks -- that part held up repeatedly -- but its *name* should not be
+believed.
+
+### 10h. Compass: +X is North
+
+Confirmed by the operator describing a Basalt ore node as "in front to the N" while it lay in the
+`+X` direction (dx +647, dy -123). This corrects an earlier mis-call in this session where a
+Stravidium vein was described as "SE" by raw-axis reasoning and the operator reported SW.
+
+### 10i. Hidden treasure: mechanic known, actor unreachable
+
+**Mechanic:** use a compactor on sand -> a container spawns -> looting it completes a journey.
+
+**Yield** (one sample, all at the same `acquisition_time`): `LandsraadTreasureComponent1` x5,
+`SpiceSand` x5, `SpiceResidue` x1, `SteelBar` x1, `IronBar` x1, `Silicone` x1.
+
+**Not in the database.** With a container exposed and unlooted directly beneath the stationary
+operator, a full `dune.actors` diff (837 rows before and after) showed **no new actor** -- the
+only change was their Sandbike respawning. **A memory scan of the same spot returned literally
+nothing** (a 40 m box on the correct Hagga process, `Survival_1`).
+
+This is the third consecutive failed treasure scan, and the first with every variable controlled.
+**Recommend not spending further in-game time on treasure until #16 is fixed.**
+
+Note the contrast, which fits a pattern seen throughout: **player-persisted things are in the DB,
+world-generated content is not.** A dropped-items backpack registers as a real
+`BP_LootContainer` actor with a live transform and full contents; base storage containers
+register; a treasure container does not.
+
+### 10j. Journeys are DB-tracked; Landsraad tasks are not active
+
+`dune.journey_story_node` holds **12,312 rows**, plus `journey_tracked_cards` (3) and
+`journey_story_node_cooldown`. So quest/journey progress *is* persisted server-side -- unlike
+storms and worms. The `landsraad_task_progress`, `..._player` and `..._guild` tables all exist but
+are **empty**, so that system is not live on this server, which is why the
+`LandsraadTreasureComponent1` from the treasure has nowhere to feed.
+
+### 10k. Two more scanner defects found
+
+- **The recall bug (#16) is process-independent.** A scan of the **HaggaBasin** process
+  (`Survival_1`, PID 1172356) with the operator standing still returned 1 hit, and that hit was a
+  false positive 1,539 m away. Every earlier failing scan was against `DeepDesert_1`. This rules
+  out any explanation specific to DeepDesert's memory layout, its procedural content-block
+  assembly, or Coriolis regeneration. **The defect is in the tool.** Logged as a comment on #16.
+- **`ValidTransform` does not bound Z.** `WorldBound` is applied to `x` and `y` only, so the false
+  positive above passed validation with `Z = 228598`. The #14 fix must add a Z bound as well as
+  the denormal and `IsInf` guards already described there.
+- **Minor:** an empty scan emits `null` rather than `[]` (Go marshalling a nil slice), which
+  breaks naive downstream parsers.
+
+### 11. Revised next steps -- three tracks (A blocks C)
+
+#### Track A: fix the tool (blocking)
+
+Nothing downstream works until the scanner is trustworthy.
+
+1. **#16 -- recall.** ~20-40% of node actors are never returned; proven tool-side (fails
+   identically in both map processes). Instrument pass 1 (X,Y candidates), pass 2 (pointer
+   references) and each `ValidateActor` rejection stage so the loss is *observed*, not inferred.
+   Then test widening the region set beyond `[heap]` + anonymous-writable, and relaxing the vtable
+   check to any file-backed executable/rodata mapping. Validate against the WindPass box, which
+   has a known 200+ marker ground truth.
+2. **#14 -- `ValidTransform`.** Reject denormals and `Inf`, **and add a Z bound** (currently only
+   X and Y are bounded, which let a `Z = 228598` false positive through).
+3. **Emit `[]` not `null`** for an empty scan.
+4. **Add a class-anchor mode.** Given a table of `resource -> known (X,Y)`, probe each anchor and
+   emit the resolved class pointers. This makes the ASLR problem self-healing (see 10a) and is the
+   mechanism the Live Map needs after every server restart.
+5. **Consider a fast-capture mode** -- dump candidate regions to disk and analyse offline. A 2-5
+   minute inline scan cannot catch a sandworm, and probably cannot catch a storm either.
+
+#### Track B: data gathering for the dynamic Live Map
+
+Target is a live map of **both** DeepDesert and Hagga Basin covering resources, POIs, player
+buildings, and storm/worm activity. Current source-by-source status:
+
+| Layer | Source | State |
+|---|---|---|
+| Spice (3 tiers), Flour Sand | `resourcefield_state` + `field_id` decode | **Ready** -- exact, live, both maps |
+| Ore / stone / flora nodes | scanner + class->name | **Blocked on #16** |
+| Named POIs (cave, ecolab/testing station, shipwreck, sietch, vendor, camp, hazard) | `dune.markers` | **Ready but discovery-limited** |
+| Player bases, storage, vehicles, players | existing `liveMap*` queries in Core | **Already shipped** |
+| Dropped loot | `dune.actors` `BP_LootContainer` + inventories | **Ready**, unused |
+| Hagga region labels | marker `DisplayName` `Survival_<Region>_` | **Ready** (normalise spelling, see 10g) |
+| DD grid labels | computed, 9x9 @ 270,000 uu, origin (-52656,-52066) | **Ready** (verified 5 cells) |
+| Map regeneration signal | `debug_get_coriolis_seeds()` | **Ready** |
+| Sandstorm (per-structure) | `game_events` type 13, `Sandstorm` reason | **Partial** -- only where a player owns a structure |
+| **Active storm position** | none found | **Open** -- memory only, never attempted |
+| **Sandworm activity** | none found | **Open** -- absent from `dune.actors` and `game_events`, checked live twice |
+| Hidden treasure | none found | **Open** -- not in DB, three empty scans |
+| Primrose water | none exists | **Unreachable** -- not an item, not persisted (10f) |
+
+Remaining identification work, cheapest first:
+
+6. **Finish DD item names** -- `Dolomite*` (Carbon) is the only one still genuinely unknown;
+   `TitaniumOre`, `StravidiumOre` and `BauxiteOre` can now inherit from their `*Pickup`
+   counterparts per 10e, though a direct gather is still cheap.
+7. **Hagga pass** -- **Jasmium** (its only home, last of the 15); confirm whether Titanium,
+   Stravidium, Bauxite, Dolomite and Magnetite exist there at all (currently zero discovered
+   markers, but Basalt appeared the moment the operator walked past one, so absence is probably
+   discovery, not reality); find the two missing regions (`Graben`, `RedD` expected); build the
+   **permanent anchor set**, which never expires because Hagga is authored.
+8. **Impure Fuel** -- unidentified, no known node type. `FuelCellPart` yields `Oil` which displays
+   as "Fuel Cell", so it is something else entirely.
+9. **Storm and worm hunting** -- both are memory-only and both are fast-moving. Do not attempt
+   with the current inline scanner; revisit after Track A item 5.
+10. **Buildings** -- Core already queries player bases, storage and vehicles for the existing Live
+    Map. Reuse those rather than rebuilding; note the NULL-`partition_id` bug (a base whose
+    instance despawned silently vanishes) recorded in section 8.
+
+#### Track C: build it
+
+11. Only once Track A is done. Sources per the table above. Design constraints from the earlier
+    eight-hats audit still stand: no continuous privileged sidecar, scoped read-only DB role,
+    console API reads a read-only bind-mounted scanner output file rather than talking to the
+    scanner. An interim `resourcefield_state`-only layer needs none of that and could ship early,
+    but it does not serve the post-storm goal on its own.
+
 - Go 1.24.4 is available locally on this machine; NOT installed on `dune-dev` — doesn't matter,
   cross-compile locally (`GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build`) and `scp` the static
   binary over (`/tmp/dune-resource-scanner` on dune-dev — not persisted anywhere, redeploy after
@@ -170,10 +772,10 @@ pattern found in session 1 — not 25 independent resource types).
 A third-party zip (`dune-spice-tools`) was reviewed, deeply audited (Layer-1 eight-hats design
 audit with 8 parallel agents + `/code-review max`, 848 tool calls), and had every finding
 remediated — but it's **still license-unresolved** (no LICENSE, no author, own `NOTICE.md`
-explicitly says don't vendor it anywhere). It lives at
-`/tmp/claude-0/-root-projects/23d506c7-e7da-4a33-a336-498708c85a63/scratchpad/dune-spice-tools/pkg/`
-— **this is session-scratchpad tmpfs and will not survive** — treat it as reference-only
-methodology, not code to copy. Because the new Go tool is meant to be **permanent** (run weekly
+explicitly says don't vendor it anywhere). It was reviewed from a session scratchpad under `/tmp` and is **deliberately not preserved
+anywhere in this repository** — vendoring it is precisely what its own `NOTICE.md` prohibits, so
+the usual "never leave anything in `/tmp`" rule does not apply to it. Treat it as reference-only
+methodology that no longer has a durable copy, not as code to go find and port. Because the new Go tool is meant to be **permanent** (run weekly
 to feed the Live Map), it must be a **clean-room reimplementation** based on facts we
 independently re-derived tonight (memory offsets, the actor-validation technique), never a port
 of that Python source. This also fully resolves the license concern for the new artifact.
@@ -322,26 +924,23 @@ it in their own real browser, or revisit with browser automation if available la
   Requirement 20/21 (branch-based work, audit trail).
 
 ## Immediate to-do list for the next session
-1. Confirm with the user: GitHub org (`Project-Arrakis` vs `yacketrj`) and visibility for the new
-   `dune-resource-scanner` repo; create it for real once confirmed.
-2. Write the actual Go source (see "What the Go tool needs to do" above) — clean-room, do not
-   read or port the Python prototype's source.
-3. Cross-compile (`GOOS=linux GOARCH=amd64`), `scp` the static binary to `dune-dev`, re-attempt
-   the ore-actor position search anchored on the confirmed base position
-   (X=-611736.35, Y=-700183.46) — should be dramatically faster than the Python attempts that
-   timed out.
-4. Cross-reference found positions against the string-scan-discovered internal names
-   (AzuriteOre, DolomiteOre, RhyoliteStone, Titanium, Bauxite, ImpureFuel, CompactedFlourSand) —
-   ideally with an in-game visual confirmation (remember: negative coordinates need the actual
-   `-` sign typed; the game shows no on-screen coordinates, so cross-check exact position via
-   `dune admin player-location`, not visual guessing).
-5. Keep trying to catch a `field_kind_id=0` field while it's still active (they despawn within
-   minutes) for an in-person ID — teleport is unreliable, so give the closest currently-active
-   position to wherever the player already is, repeatedly, rather than one fixed target.
-6. Once positions + names are solid: design and implement the real Live Map integration in
-   `dune-awakening-selfhost-docker` (new branch, new `console/api` route reading the scanner's
-   output, new marker/layer type with an `overlays`-based freshness indicator), following the
-   no-sidecar/scoped-role/read-only-mount design above.
+
+**Superseded — this list is from session 2 and every item is done or obsolete. See section 11
+("Revised next steps") for the current list.** Kept only as history of how the work was sequenced;
+the session-2 items were: create the repo, write the Go source, cross-compile and deploy to
+`dune-dev`, cross-reference positions against string-scan names, catch a live `field_kind_id=0`
+field for in-person ID (**done — it is Flour Sand**), and then build the Live Map integration.
+
+**Operational notes still worth keeping from that list:**
+- Negative coordinates need the actual `-` sign typed in-game; the game shows no on-screen
+  coordinates, so cross-check exact position via `dune.actors`' live transform (more reliable
+  than `dune admin players`, whose map field was observed stale — see below).
+- `dune admin player-location` and `dune admin players --online --show-full-ids` are read-only
+  and safe. **But `dune admin players` reported the wrong map** while `dune.actors`' transform was
+  correct; prefer the direct DB query.
+- **Confirm the operator is stationary before any scan.** The scanner takes its `-near`
+  coordinates at launch and runs 2–5 minutes; two scans were wasted this session because the
+  operator travelled mid-scan and the empty results looked like real negative findings.
 
 ## Cleanup notes
 - `~/spice-discover/` on `dune-dev` still has the disposable Python probe scripts — fine to leave
