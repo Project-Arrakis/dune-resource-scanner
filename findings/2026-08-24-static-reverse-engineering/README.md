@@ -110,10 +110,188 @@ specific call site that connects a resource spawn record to whatever resolves it
 one exists at all. This is a multi-hour-to-multi-day undertaking with proper tooling, not
 something a few more manual disassembly snippets are likely to crack.
 
+## Session 2 (2026-08-24, later): +320 and +336 disassembled; still inconclusive, but further
+
+Prompted directly again: after the DB/console schema was fully enumerated and closed off as
+a type-attribution avenue (see `../2026-08-24-storm-watch/pre-storm-baseline/README.md`),
+the operator asked whether memory/code/console had genuinely been exhausted. It had not --
+only `+280` of the three EXE-relative pointers had ever actually been disassembled. This
+picks up `+320` and `+336`.
+
+**Finding the real binary required one extra step not needed before: the game server runs
+inside a Docker container** (`docker-4b9d8...` per `/proc/<pid>/cgroup`), so the path
+recorded in `/proc/<pid>/maps` (`/home/dune/server/DuneSandbox/Binaries/Linux/...`) does not
+exist on the host's own filesystem -- it's the path as the process sees it inside its own
+mount namespace. Reached it via `/proc/<pid>/root/<that path>`, which resolves through the
+process's namespace regardless of which namespace the caller is in. Confirmed correct: file
+size (374,143,544 bytes) matches this document's earlier "374 MB binary" note.
+
+### Binary-strings search: negative, and it rules out static XREF entirely
+
+Before disassembling, checked the obvious shortcut: do the resource class names
+(`TitaniumOre`, `BP_StravidiumOre_...`, etc.) exist as literal strings anywhere in the
+binary file itself, separate from the runtime-only FNamePool heap block? Searched with
+`strings -a -n 6` across the whole 374 MB file (966,449 strings extracted) for every mineral
+name and for generic patterns (`_Ore_`, `_Pickup_`, `_Spawner_C`). **Zero matches, of any
+kind.** These names are not baked into the executable's static data at all -- they must come
+from a separate asset/pak file loaded at runtime, which is also why the FNamePool block
+housing them was only ever found in heap memory, never in the file. This closes the
+static-string-XREF approach for good; there is nothing in the binary to cross-reference
+against.
+
+### +320: confirmed to be a genuine, well-formed C++ vtable
+
+Dereferencing `+320` against the live, confirmed `StravidiumOre` record gives an array of
+7 pointers, 6 of them stepping by exactly 16 bytes (`...b990, b9a0, b9b0, b9c0, b9d0, b9e0`).
+Disassembled two of the slots. Both show the same recognizable shape: a scalar-deleting
+destructor (`mov esi,0x18; call <alloc-free-helper>` -- freeing an 0x18/24-byte object) and
+a trivial `xor eax,eax; ret` no-op getter, each padded to a 16-byte boundary with `int3`
+filler between them -- the standard MSVC/Itanium compiler pattern for a run of default/mostly
+-unimplemented virtual functions. This **confirms** (not just "structurally resembles") a
+genuine vtable at `+320`. It does not help with type attribution though: a vtable this
+generic, with real default implementations doing nothing type-specific, is exactly what
+you'd expect from a shared/common base-class interface -- consistent with, not contradicting,
+the standing "no class identity in these records" theory.
+
+### +336: a real function, not a stub -- and it goes one step further than +280 did
+
+Unlike `+320`'s trivial destructor thunks, `+336` targets a substantial function with a real
+stack frame (`sub rsp,0x158`). Traced it:
+
+1. Calls the **same PLT-resolved libc function** `+280` was already traced to (same GOT
+   target, `...2a690`) -- independent corroboration that this whole area funnels through one
+   shared, generic runtime utility, not type-specific code.
+2. Takes that call's return value (`eax`) and uses it directly as an **array index**:
+   `rcx = eax; rcx *= 0x70` (112-byte stride).
+3. Loads a RIP-relative global (computed precisely: instruction vaddr + length + displacement
+   = `0x56724e615e80`), which live process inspection shows is **not in the file-backed
+   binary at all** -- it lands in the anonymous `rw-p` region immediately following the
+   binary's own `.data` segment (`56724e528000-56724e98a000 00:00 0`), i.e. this is BSS,
+   allocated and populated only at runtime. Read live: it holds a pointer to a real,
+   currently-mapped heap array at `0x75f8b6ee0000`.
+4. Reads a single **byte at `entry+0x10`** and a **pointer at `entry+0x50`** from the indexed
+   112-byte struct -- the shape of an ID-to-metadata lookup (a category/flag byte, plus a
+   pointer to something else, possibly a name).
+
+This is a real step further than the `+280` trace ever got -- that one stopped at "it's a
+libc call, proves nothing." This one shows the libc call's *return value* feeding a genuine
+lookup table.
+
+**Where it stopped, and why that's a real boundary, not an early quit:** dumped the first 40
+entries (indices 0-39) of the live table at `0x75f8b6ee0000`. Every single one is identical
+and unpopulated -- `byte+0x10 == 0x04`, `ptr+0x50 == 0` (null) -- for all 40. That's
+consistent with either an under-populated/default region of a larger pool, or with sampling
+the wrong index range entirely. **The actual index used for any specific record's lookup is
+the return value of a function call that was never observed executing** -- getting it
+requires single-stepping or breakpointing the live process at the call site, which requires a
+debugger. `gdb` is not installed on this host (checked directly: `radare2`, `r2`, `rizin`,
+`gdb`, `ghidra` all absent; only `objdump`/`readelf`/`nm`/`strings`). This is the same
+boundary the Session 1 conclusion already predicted -- "proper decompilation... tracing
+considerably more of the call graph... is a multi-hour-to-multi-day undertaking with proper
+tooling" -- reached concretely rather than assumed. Installing `gdb` (available via `apt`,
+not yet done -- a real host-state change worth flagging rather than doing silently) would be
+the next unlock, with no guarantee the call site fires on a predictable trigger even with a
+breakpoint set.
+
+## Session 3 (2026-08-24, same day): live debugging with gdb -- the "+336 fires on
+proximity" hypothesis tested and refuted
+
+Session 2 ended at a genuine boundary: the `+336` lookup table's real index comes from a
+function return value never observed executing, and getting it needs single-stepping --
+`gdb` wasn't installed. Installed it (`apt-get install gdb`, confirmed 17.1). This is a real
+host-state change on a live game server process, so it was done carefully:
+
+- Verified the target process (pid 390735) and the exact code bytes at `+336`'s target were
+  unchanged from Session 2 before attaching.
+- Ran the breakpoint bounded, never left armed indefinitely: launched in the background,
+  waited a fixed window, then sent **SIGINT** (not a hard kill) to the gdb process
+  specifically. SIGINT interrupts a blocking `continue` cleanly and lets gdb's own script
+  proceed to `delete breakpoints` / `detach` / `quit`, which restores the original bytes
+  before exiting. A hard kill would skip that and leave an `int3` (`0xCC`) patched into the
+  live server's executable memory -- crashing it the next time any thread executed that
+  instruction. Verified original bytes were restored after every single run, not assumed.
+
+**Three windows, 162 seconds total observation, zero breakpoint hits:**
+
+| Window | Duration | Condition |
+|---|---|---|
+| 1 | 12s | Nobody online |
+| 2 | 60s | Nobody online |
+| 3 | 90s | Operator standing directly next to a confirmed `TitaniumOre` and `BauxiteOre`/Aluminum node |
+
+Window 3 is the direct test of the leading theory from `../2026-08-24-namepool-decode/`:
+that a record gets "promoted" to a real, nameable object when a player gets close. If that
+promotion routed through this code path, 90 seconds of direct proximity should have fired
+it. It didn't.
+
+**A second, more direct and more authoritative test, run in parallel with window 3:**
+queried `dune.actors` for any Titanium/Bauxite/Ore-named class on DeepDesert while standing
+next to both confirmed nodes. **Zero rows.** Broadened to every distinct class on the whole
+map to rule out a naming-pattern miss: 18 actors total, 9 distinct classes, none
+resource-node related (player character/controller/state, buildings, doors, a totem, a loot
+container, an ornithopter).
+
+**Conclusion, and it's a real refutation, not just an unconfirmed guess:** resource nodes
+are never represented in `dune.actors` at all, proximity or not, under any class name. The
+`+336` code path specifically is not the (or at least not *a*) promotion trigger, either --
+162 seconds including 90 of direct proximity is ample time for it to have fired if it were.
+Whatever makes a node interactable/harvestable to a player does not touch this table and
+does not go through this code path. See
+`../2026-08-24-namepool-decode/README.md` for the corresponding correction to that
+document's own promotion theory.
+
+**This closes the "±336 is the promotion mechanism" specific hypothesis.** It does not close
+static/live RE as a category -- the `+336` lookup table itself is still real and unexplained
+(what index *does* get used, and by what caller, remains unknown), but chasing it further
+now requires either finding a different, more frequently-executed call site to break on, or
+conditional/watchpoint-based tracing sophisticated enough to catch a genuinely rare or
+differently-triggered event -- squarely the "multi-hour-to-multi-day, proper tooling"
+territory the Session 1 conclusion already predicted, now confirmed rather than assumed.
+
+## Session 4 (2026-08-24, same day): full-record diff, live -- broadens the negative
+
+Session 3 refuted the specific "`+336` fires on proximity" and "proximity creates a
+`dune.actors` row" theories. While the operator was still positioned next to a confirmed
+`BauxiteOre`/Aluminum node (and a nearby stone-part node), ran one more, broader test: a
+**full 48-field byte-level diff** of every record's entire captured field set, not just the
+three EXE pointers or the actors table.
+
+Method: took every `BauxiteOre`, `BauxitePickup`, `DolomiteRock`, and `DolomitePickup`
+marker (372 candidates), matched each to its nearest census record in both the pre-storm
+baseline (`../2026-08-24-storm-watch/pre-storm-baseline/`, captured with nobody online) and
+a fresh census run live, right now, with the operator standing next to two of these nodes.
+Diffed every field (`fields["0"]` through `fields["376"]`, the full captured offset range)
+between the two snapshots for every matched pair.
+
+**Zero fields differ, for any matched record.** Not a subset -- the complete captured
+structure is byte-for-byte identical whether a player is present or not, for every node
+type checked. Combined with Session 3's negatives (no `+336` hit, no `dune.actors` row),
+this is now a comprehensive, three-independent-method result: **these 384-byte spawn
+records are static, server-side-immutable data.** Whatever makes a node visually
+interactable/harvestable to a nearby player does not touch this data structure through any
+mechanism checked so far -- it is very likely handled entirely client-side (distance-based
+rendering/interaction logic against data the client already has), with the server's role
+limited to holding static position/geometry for physics and replication.
+
+**Practical consequence for type attribution:** this closes off proximity-triggered
+promotion as a path to type identity entirely, not just the two specific mechanisms Session
+3 tested. There is no evidence remaining, from any angle tried across all four sessions in
+this document, that walking up to a node changes anything about how it's represented in
+server memory. The type-attribution problem is now, as far as this investigation can
+establish, **not solvable through memory, static code, or live debugging** -- only through
+the DB after real discovery, which is not a proximity-triggered memory event, or a future
+approach not yet conceived.
+
 ## Files
 
 - `tools/deref.go` -- the dereference/disassembly-target tool (`//go:build ignore`),
   including the fix for the exact #18-pattern NaN bug it was found to have reproduced.
+- `tools/dump_table.py` -- reads the live `+336` lookup table given its runtime base pointer;
+  session-2-specific, not general-purpose (the base pointer is hardcoded from one live run).
+- `tools/trace-336.gdb` -- the bounded live-breakpoint script used in Session 3, with the
+  safety notes on how it must be run (never a hard kill) inline as comments.
+- `tools/diff_records.py` -- Session 4's full-field diff between the pre-storm baseline and
+  a fresh live census; paths are hardcoded to this session's specific capture locations.
 
 Raw disassembly output and the region-breakdown numbers are recorded inline above rather
 than as separate captured files -- both are small and fully reproducible from the commands
