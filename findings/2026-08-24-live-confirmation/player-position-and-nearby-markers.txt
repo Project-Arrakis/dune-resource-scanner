@@ -1,0 +1,71 @@
+Live player position (dune.actors, DeepDesert):
+ id  |                                    class                                     |    x    |    y    |  z
+-----+------------------------------------------------------------------------------+---------+---------+------
+ 873 | /Game/Dune/Characters/Player/BP_DunePlayerCharacter.BP_DunePlayerCharacter_C | -680175 | -950794 | 4593
+
+Markers within a 10000x10000 box of that position (dune.markers, area_id=46, "H-3"):
+        t         |    x    |    y    |  z   | area_id | dist
+------------------+---------+---------+------+---------+------
+ StravidiumPickup | -680837 | -949978 | 4577 |      46 | 1051
+ StravidiumOre    | -680553 | -949772 | 4621 |      46 | 1090   <-- 10.9m from player, matches operator's report
+ ScrapMetalPart   | -681011 | -948458 | 8256 |      46 | 2481
+ StravidiumOre    | -680927 | -948421 | 8224 |      46 | 2489
+ TitaniumPickup   | -675632 | -950153 | 5216 |      46 | 4588
+ TitaniumOre      | -675510 | -950400 | 5247 |      46 | 4682
+ TitaniumOre      | -675942 | -948360 | 3614 |      46 | 4883
+ TitaniumPickup   | -675596 | -948130 | 3603 |      46 | 5298
+ TitaniumOre      | -677881 | -943803 | 2610 |      46 | 7358
+ ScrapMetalPart   | -677515 | -943772 | 2540 |      46 | 7509
+ BrittleBush      | -672882 | -953201 | 2276 |      46 | 7680
+ StravidiumPickup | -673605 | -945990 | 4156 |      46 | 8139
+ StravidiumOre    | -673368 | -946325 | 4187 |      46 | 8143
+
+Cross-check against 08:38 marker snapshot (findings/2026-08-24-issue-16/dd-markers-full.csv):
+  nearest match to (-680553,-949772): 158134.6 uu away, type=TitaniumOre
+  -> the StravidiumOre marker at (-680553,-949772) did not exist in that snapshot.
+
+Cross-check against 11:03 zero-player census (dd-census-ZEROPLAYER.jsonl):
+  nearest census record to (-680553,-949772): 1.1 uu away, Z=4607 (marker Z=4621, diff 14)
+  -> the census predicted this exact position before the marker existed.
+
+=== Second confirmation, same session ===
+
+Live player position (dune.actors, DeepDesert):
+ id  |                                    class                                     |    x    |    y    |  z
+-----+------------------------------------------------------------------------------+---------+---------+------
+ 873 | /Game/Dune/Characters/Player/BP_DunePlayerCharacter.BP_DunePlayerCharacter_C | -675879 | -948531 | 3618
+
+Nearest markers (dune.markers, area_id=46, "H-3"):
+        t         |    x    |    y    |  z   | area_id |  dist
+------------------+---------+---------+------+---------+--------
+ TitaniumOre      | -675942 | -948360 | 3614 |      46 |  182.2   <-- 1.8m from player
+ TitaniumPickup   | -675596 | -948130 | 3603 |      46 |  490.8
+
+Cross-check against 08:38 marker snapshot:
+  nearest match to (-675942,-948360): 154904.4 uu away, type=TitaniumOre
+  -> did not exist in that snapshot.
+
+Cross-check against 11:03 zero-player census:
+  nearest census record: 0.6 uu away, Z=3601 (marker Z=3614, diff 13)
+  -> predicted before the marker existed. Tighter match than confirmation #1.
+
+=== Third confirmation: an island with multiple resources (unfiltered sample) ===
+
+Live player position (dune.actors, DeepDesert):
+ id  |                                    class                                     |   x    |   y    |  z
+-----+------------------------------------------------------------------------------+--------+--------+------
+ 873 | /Game/Dune/Characters/Player/BP_DunePlayerCharacter.BP_DunePlayerCharacter_C | 106519 | 621181 | 3962
+
+Five nearest markers, all within 700uu (dune.markers, area_id=67), checked against both
+the 08:38 snapshot and the 11:03 zero-player census:
+
+type                in 08:38 snapshot?    census predicted?
+FuelCellPart        no (284km away)       YES (1.0uu)
+ScrapMetalWreckage  no (285km away)       YES (1.0uu)
+BauxiteOre          no (284km away)       no (424uu)
+ScrapMetalPart      no (285km away)       YES (82.0uu)
+BauxitePickup       no (284km away)       no (107uu)
+
+All five genuinely undiscovered before this visit. 3 of 5 (60%) matched the zero-player
+census -- in line with the 60.2%/64.8% aggregate recall from the retrospective test, not
+cherry-picked. The two misses were near-misses (107uu, 424uu), not wrong-area failures.
