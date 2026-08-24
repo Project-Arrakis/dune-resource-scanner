@@ -119,6 +119,7 @@ The counts are the least checkable part and the most quoted, so check in this or
 
 | File | What it is |
 |---|---|
+| `VALIDATION-REPORT.md` | **Standalone, shareable claim-by-claim report** — what is inaccurate, why, and what is true. Start here if you are handing this to the document's author |
 | `marker-counts-2026-08-24.csv` | All 99 marker types with counts, 15,553 rows total |
 | `validation.txt` | Output of the tool below |
 | `tools/validate_claims.py` | Re-runnable; splits claims by `long_range` so checkable and non-checkable are never mixed |
