@@ -95,15 +95,16 @@ formation vs. a single ore rock), an artifact of these nodes being freshly revea
 bulk-area event rather than long-settled, or something else, is **not established** —
 flagging it rather than guessing further tonight.
 
-One relevant fact from the operator, not independently verified via RE: **every other ore
-and pickup type is shared between DeepDesert and Hagga — Jasmium is the only ore type
-exclusive to Hagga.** If Jasmium's Blueprint class was implemented separately from the
-shared cross-map mineral hierarchy (rather than reusing the same
-`BP_<Mineral>_[Static|Pickup|Ore]_[A-D]_[Component|Spawner]_C` pattern the shared types
-follow), a class-specific difference in where the spawn record's position field sits
-relative to the actual node mesh would plausibly explain a consistent tens-of-metres
-offset that other, shared types don't show. Plausible, not confirmed — the offsets above
-are all that's actually measured.
+**Correction, same session**: this originally claimed, on the operator's word, that
+Jasmium is the only ore type exclusive to Hagga, and floated a Blueprint-class-difference
+theory on top of that premise. The operator retracted it shortly after: **Primrose is the
+Hagga-exclusive one** (its resource is water, which does not exist on DeepDesert) — not
+Jasmium. Whether Jasmium exists on DeepDesert too (just undiscovered there, same as it was
+on Hagga until today) or is genuinely Hagga-only is **not established**; a `grep` against
+a same-day DD marker snapshot found zero Jasmium rows, but absence from `dune.markers`
+means "undiscovered," not "doesn't exist," so that check is not conclusive either way. The
+Blueprint-class-difference theory for Jasmium's positional offset is withdrawn along with
+its premise — the offset itself (measured, real) stands; the explanation does not.
 
 ## What this does and does not change
 
