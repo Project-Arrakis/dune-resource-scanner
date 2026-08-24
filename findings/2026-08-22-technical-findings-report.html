@@ -632,7 +632,7 @@
         <li>Do so with a tool that is safe to run repeatedly against a live, player-facing game server: read-only, no continuous privileged process, no impact to server performance or availability beyond a bounded, on-demand scan.</li>
         <li>Produce output that can feed a future Live Map integration in <code class="inline">dune-awakening-selfhost-docker</code> (out of scope for this report — tracked separately in <code class="inline">CONTINUATION.md</code>).</li>
       </ol>
-      <p>This report covers steps 1–2 as executed against <code class="inline">dune-dev</code> (192.168.21.10), the non-production development instance of the game server stack. It does not cover the Live Map integration itself.</p>
+      <p>This report covers steps 1–2 as executed against <code class="inline">dune-dev</code> (<dev-vm-ip>), the non-production development instance of the game server stack. It does not cover the Live Map integration itself.</p>
     </section>
 
     <section id="system">
@@ -644,7 +644,7 @@
           <tbody>
             <tr><td>Target process</td><td class="wrap"><code class="inline">DuneSandboxServer-Linux-Shipping</code> (DeepDesert_1, PvP partition 32)</td><td class="wrap"><code class="mono">ps aux</code> on dune-dev, this session</td></tr>
             <tr><td>PID at investigation time</td><td class="mono">3693040</td><td>same</td></tr>
-            <tr><td>Host</td><td class="wrap">dune-dev, 192.168.21.10, <span class="mono">duneawakening-2</span></td><td class="wrap"><span class="mono">ssh dune-dev "uname -a"</span></td></tr>
+            <tr><td>Host</td><td class="wrap">dune-dev, <dev-vm-ip>, <span class="mono"><scan-host></span></td><td class="wrap"><span class="mono">ssh dune-dev "uname -a"</span></td></tr>
             <tr><td>Host OS</td><td class="wrap">Ubuntu 26.04 LTS, kernel 7.0.0-29-generic</td><td class="wrap"><span class="mono">/etc/os-release</span></td></tr>
             <tr><td>Host RAM</td><td>48GiB total, 24GiB available</td><td class="wrap"><span class="mono">free -h</span></td></tr>
             <tr><td>Target heap-like footprint</td><td>~16.7–20GB / 399–669 regions</td><td class="wrap">region-size sums, this session</td></tr>
