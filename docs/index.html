@@ -204,6 +204,62 @@ so they must be re-derived after every restart, which needs at least one discove
 per type — unavailable at t=0 after a storm.</p>
 <hr />
 <h2>Findings</h2>
+<h3>2026-08-24 — Post-storm scan hardened, tested, and actually scheduled</h3>
+<p><strong><a href="https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/2026-08-24-storm-watch/"><code>2026-08-24-storm-watch/</code></a></strong></p>
+<div class="scroller"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip c-no">disproved</span></td>
+<td><em>Corrected</em>: this was reported as &quot;still queued&quot; in conversation while it had, in fact, never been scheduled -- the setup was built, then dropped mid-session. Caught when asked directly how to ensure it succeeds</td>
+</tr>
+<tr>
+<td><span class="chip c-ok">measured</span></td>
+<td>Replaced a fragile single-fixed-time plan with an idempotent windowed cron job (every 10 min, 04:00-07:59), self-bounded to one date</td>
+</tr>
+<tr>
+<td><span class="chip c-ok">measured</span></td>
+<td>Mechanism proven live before trusting it 17 hours unattended: 5 consecutive clean firings, <code>dune</code> CLI resolving correctly under cron's minimal environment (a real, common failure mode this catches)</td>
+</tr>
+<tr>
+<td><span class="chip c-no">disproved</span></td>
+<td>Two real bugs caught before deploy: a Python/bash quote-escaping mix-up that silently corrupted the first script version, and an awk permission-bit off-by-one</td>
+</tr>
+</tbody>
+</table></div>
+<h3>2026-08-24 — Static disassembly of the game binary: real attempt, inconclusive</h3>
+<p><strong><a href="https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/2026-08-24-static-reverse-engineering/"><code>2026-08-24-static-reverse-engineering/</code></a></strong></p>
+<div class="scroller"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="chip c-ok">measured</span></td>
+<td><strong>A real, unscanned 2.13 GB of read-only anonymous memory found</strong> -- structurally a better candidate for type tables than anything examined so far (all prior candidates were per-instance heap data)</td>
+</tr>
+<tr>
+<td><span class="chip c-inf">inferred</span></td>
+<td>One of the three previously-dead EXE pointers, disassembled: a structurally FName-suggestive pattern (cached lookup index in writable memory, sentinel check, block-masked pointer reads)</td>
+</tr>
+<tr>
+<td><span class="chip c-no">disproved</span></td>
+<td>The traced call resolved to a plain <code>libc.so.6</code> function, not game-specific code -- <strong>inconclusive, not confirmation</strong></td>
+</tr>
+<tr>
+<td><span class="chip c-warn">bounded</span></td>
+<td>Full resolution would need proper decompilation tooling and considerably more tracing -- stated as a real multi-hour-to-multi-day undertaking, not implied to be close</td>
+</tr>
+</tbody>
+</table></div>
 <h3>2026-08-24 — Issue #16 root cause: ore nodes are not actors</h3>
 <p><strong><a href="https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/2026-08-24-issue-16/"><code>2026-08-24-issue-16/</code></a></strong></p>
 <div class="scroller"><table>

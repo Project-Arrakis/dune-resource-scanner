@@ -58,6 +58,30 @@ per type — unavailable at t=0 after a storm.
 
 ## Findings
 
+### 2026-08-24 — Post-storm scan hardened, tested, and actually scheduled
+
+**[`2026-08-24-storm-watch/`](2026-08-24-storm-watch/)**
+
+| | |
+|---|---|
+| ❌ | *Corrected*: this was reported as "still queued" in conversation while it had, in fact, never been scheduled -- the setup was built, then dropped mid-session. Caught when asked directly how to ensure it succeeds |
+| ✅ | Replaced a fragile single-fixed-time plan with an idempotent windowed cron job (every 10 min, 04:00-07:59), self-bounded to one date |
+| ✅ | Mechanism proven live before trusting it 17 hours unattended: 5 consecutive clean firings, `dune` CLI resolving correctly under cron's minimal environment (a real, common failure mode this catches) |
+| ❌ | Two real bugs caught before deploy: a Python/bash quote-escaping mix-up that silently corrupted the first script version, and an awk permission-bit off-by-one |
+
+### 2026-08-24 — Static disassembly of the game binary: real attempt, inconclusive
+
+**[`2026-08-24-static-reverse-engineering/`](2026-08-24-static-reverse-engineering/)**
+
+| | |
+|---|---|
+| ✅ | **A real, unscanned 2.13 GB of read-only anonymous memory found** -- structurally a better candidate for type tables than anything examined so far (all prior candidates were per-instance heap data) |
+| 🔹 | One of the three previously-dead EXE pointers, disassembled: a structurally FName-suggestive pattern (cached lookup index in writable memory, sentinel check, block-masked pointer reads) |
+| ❌ | The traced call resolved to a plain `libc.so.6` function, not game-specific code -- **inconclusive, not confirmation** |
+| ⚠️ | Full resolution would need proper decompilation tooling and considerably more tracing -- stated as a real multi-hour-to-multi-day undertaking, not implied to be close |
+
+
+
 ### 2026-08-24 — Issue #16 root cause: ore nodes are not actors
 
 **[`2026-08-24-issue-16/`](2026-08-24-issue-16/)**
