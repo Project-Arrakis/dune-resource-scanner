@@ -27,3 +27,24 @@ Cross-check against 08:38 marker snapshot (findings/2026-08-24-issue-16/dd-marke
 Cross-check against 11:03 zero-player census (dd-census-ZEROPLAYER.jsonl):
   nearest census record to (-680553,-949772): 1.1 uu away, Z=4607 (marker Z=4621, diff 14)
   -> the census predicted this exact position before the marker existed.
+
+=== Second confirmation, same session ===
+
+Live player position (dune.actors, DeepDesert):
+ id  |                                    class                                     |    x    |    y    |  z
+-----+------------------------------------------------------------------------------+---------+---------+------
+ 873 | /Game/Dune/Characters/Player/BP_DunePlayerCharacter.BP_DunePlayerCharacter_C | -675879 | -948531 | 3618
+
+Nearest markers (dune.markers, area_id=46, "H-3"):
+        t         |    x    |    y    |  z   | area_id |  dist
+------------------+---------+---------+------+---------+--------
+ TitaniumOre      | -675942 | -948360 | 3614 |      46 |  182.2   <-- 1.8m from player
+ TitaniumPickup   | -675596 | -948130 | 3603 |      46 |  490.8
+
+Cross-check against 08:38 marker snapshot:
+  nearest match to (-675942,-948360): 154904.4 uu away, type=TitaniumOre
+  -> did not exist in that snapshot.
+
+Cross-check against 11:03 zero-player census:
+  nearest census record: 0.6 uu away, Z=3601 (marker Z=3614, diff 13)
+  -> predicted before the marker existed. Tighter match than confirmation #1.

@@ -27,6 +27,22 @@ test in `2026-08-24-validation/` (which compared two already-captured snapshots 
 fact), this one was set up and watched happen: fly into unexplored terrain toward a
 specific coordinate the census already named, and the marker appears exactly there.
 
+## Second confirmation, same session
+
+A different resource type, ~5 km further into H-3: the operator stopped **1.8 m** from a
+`TitaniumOre` marker. Same checks, same result:
+
+| Question | Answer |
+|---|---|
+| Existed in the 08:38 snapshot? | **No** -- nearest match 155 km away |
+| Predicted by the 11:03 zero-player census? | **Yes -- 0.6 m away, Z off by 13 units** -- tighter than confirmation #1 |
+
+**Two for two, two different resource types (StravidiumOre, TitaniumOre), both discovered
+live after a census taken with nobody online.** A single hit could plausibly be
+coincidence in a dense field; a second, independent hit on a different type meaningfully
+narrows that. This is no longer a hypothesis under test -- it is a repeated, direct
+observation.
+
 ## The actor-resolution attempt, and why it failed as expected
 
 A proximity scan (`-near=-680553,-949772 -tolerance 3000`) was run against the live

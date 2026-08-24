@@ -26,10 +26,10 @@ The headline result is that the scanner finds nodes **before anyone has discover
 — 60.2% of markers that appeared *after* a scan was taken, against 64.8% for markers
 already known. That is the capability the whole project exists for.
 
-It has also been watched happen directly: flying into an unexplored cell toward a
-coordinate the census had already named, a real `StravidiumOre` node appeared exactly
-where predicted — captured with **zero players online**, 1.1 m off, discovered 10.9 m
-from where the operator stopped.
+It has also been watched happen directly, twice: flying into an unexplored cell toward
+coordinates the census had already named, real `StravidiumOre` and `TitaniumOre` nodes
+appeared exactly where predicted — both captured with **zero players online**, within
+1.1 m of the actual position.
 
 What is missing is not a *method* for naming resources — that exists and is proven. It is a
 way to apply it at scale: naming works through actors, and only ~3% of nodes appear as
