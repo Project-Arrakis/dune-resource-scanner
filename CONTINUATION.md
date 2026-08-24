@@ -23,6 +23,13 @@ Go tool, clean-room, replacing a Python prototype that hit a real performance wa
 sections were written before the post-storm requirement was stated and reach conclusions it
 overturns.
 
+**Where the paperwork lives.** This file is the single living document — every claim in it is
+kept current, and corrections are made in place. Alongside it, [`sessions/`](sessions/) holds the
+handoff prompt for the next session (`sessions/CONTINUATION-PROMPT.md`, overwritten each time)
+and dated, append-only point-in-time records (`sessions/YYYY-MM-DD-findings.md`). Raw scan output
+and captures go in [`findings/`](findings/). **None of these ever go in `/tmp`** — it is `tmpfs`
+on these hosts, so anything a future session needs to find would not survive a reboot.
+
 ## Session 2 update (2026-08-21, later same day) — v1 core implementation shipped
 - Repo created for real: **`Project-Arrakis/dune-resource-scanner`, private** (user confirmed
   this org/visibility explicitly this session). `origin` on the local clone already points at
@@ -765,10 +772,10 @@ Remaining identification work, cheapest first:
 A third-party zip (`dune-spice-tools`) was reviewed, deeply audited (Layer-1 eight-hats design
 audit with 8 parallel agents + `/code-review max`, 848 tool calls), and had every finding
 remediated — but it's **still license-unresolved** (no LICENSE, no author, own `NOTICE.md`
-explicitly says don't vendor it anywhere). It lives at
-`/tmp/claude-0/-root-projects/23d506c7-e7da-4a33-a336-498708c85a63/scratchpad/dune-spice-tools/pkg/`
-— **this is session-scratchpad tmpfs and will not survive** — treat it as reference-only
-methodology, not code to copy. Because the new Go tool is meant to be **permanent** (run weekly
+explicitly says don't vendor it anywhere). It was reviewed from a session scratchpad under `/tmp` and is **deliberately not preserved
+anywhere in this repository** — vendoring it is precisely what its own `NOTICE.md` prohibits, so
+the usual "never leave anything in `/tmp`" rule does not apply to it. Treat it as reference-only
+methodology that no longer has a durable copy, not as code to go find and port. Because the new Go tool is meant to be **permanent** (run weekly
 to feed the Live Map), it must be a **clean-room reimplementation** based on facts we
 independently re-derived tonight (memory offsets, the actor-validation technique), never a port
 of that Python source. This also fully resolves the license concern for the new artifact.
