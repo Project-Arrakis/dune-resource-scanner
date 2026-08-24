@@ -24,27 +24,54 @@ process memory is the only way to see undiscovered nodes.
 
 ### Track A — fix the scanner (do this first)
 
-1. **[#16](https://github.com/Project-Arrakis/dune-resource-scanner/issues/16) — recall, ~20–40%.**
-   The blocker. Already ruled out: broken scanner (a known-good target reproduces at 0.08 m),
-   depletion (untouched terrain fails identically), class layout (`StravidiumOre` 0/5 in one box
-   but 0.06 m elsewhere), player-proximity streaming, and anything DeepDesert-specific (the Hagga
-   process fails the same way). **The defect is in the tool and the failure is per-instance.**
-   Leading suspect: pass 2 only finds an actor if a pointer to its `RootComponent` lies within the
-   regions `HeapLikeRegions` scans.
-   **Start by instrumenting** pass 1 candidates, pass 2 references, and each `ValidateActor`
-   rejection stage — observe the loss rather than guessing. Then try widening the region set, and
-   relaxing the vtable check to any file-backed executable/rodata mapping (repeating the #8 fix
-   one level out). Validate against the WindPass box at `-near=-4368,-198837 -tolerance 15000`,
-   which has 200+ markers as ground truth.
-2. **[#14](https://github.com/Project-Arrakis/dune-resource-scanner/issues/14) — `ValidTransform`.**
-   Reject denormals and `Inf`, **and add a Z bound** — only X and Y are bounded today, which let a
-   `Z = 228598` false positive through.
+**Session 4 (2026-08-24) found #16's root cause. Read `CONTINUATION.md` Session 4 and
+`findings/2026-08-24-issue-16/README.md` before touching this.** The summary:
+
+- Pass 1 finds **211/211 known markers (100%)**. Pass 2 resolves **6/211 (2.8%)**.
+  Positions were never the problem — the missing output is a resource *type*.
+- The hypothesis this issue was opened with (back-references outside the scanned
+  regions) is **disproved**. Offset-agnostically, **nothing points into the 2 KB before
+  these nodes' transforms**, so widening the region set cannot help.
+- Ore/scrap/pickup nodes are **384-byte spawn records in an array**, not UObject actors.
+  Spice and flour sand are unaffected — seed mode reaches them through a real actor.
+- Filtering on the spawn-record signature gives **152/211 (72%)** at 1–2 copies per
+  marker — a **25× improvement** with no actor chain at all.
+
+**Map-wide follow-up:** the signature approach now scans the whole world in **17 s at
+136 MB** and hits **64.8% marker coverage (5,144 / 7,934)** vs the shipped 2.8% — ore and
+rock 66–89%, small pickups 14–30%, POIs 0% (expected; they are streamed). Four
+type-attribution routes are ruled out — the actor chain, all 48 record offsets, the object
+`+0` points at, and memory-address clustering. **The 80,803 unmatched records are not all
+undiscovered nodes** (median Z 18,058 vs 3,715; 5.5x the markers even in the best-explored
+cell) — do not present the census as a complete map.
+
+1. **[#16](https://github.com/Project-Arrakis/dune-resource-scanner/issues/16) — still the
+   blocker, but it is a redesign, not a bug fix.** Next steps, cheapest first:
+   (a) relax the spawn-record signature (the `+8 == 0x0000000100000001` constant is
+   probably over-strict) and re-measure against the same 211-marker ground truth;
+   (b) follow the record's `+0` heap pointer and inspect what it points at, rather than
+   scoring it blind; (c) test whether one of the EXE pointers at record `+280/+320/+336`
+   identifies the type — those are the only module-relative values in the record, so a hit
+   there would also be **stable across restarts** and would solve the ASLR/anchor problem.
+   The harness for all three is in `findings/2026-08-24-issue-16/tools/` (`//go:build ignore`;
+   run with `go run`). Ground truth box: `-near=-4368,-198837 -tolerance 15000`.
+2. ~~#14 `ValidTransform`~~ — **done, PR #17** (denormals, `Inf`, Z bound). Note the Z bound
+   is `WorldBound`, so it does **not** reject the `Z = 228598` hit; that was deliberate.
 3. **Emit `[]` not `null`** on an empty scan (Go nil-slice marshalling; breaks naive parsers).
-4. **Add a class-anchor mode.** Given `resource -> known (X,Y)`, probe each anchor and emit the
-   resolved class pointers. Class pointers are per-process and per-restart and cannot be stored;
-   anchors make re-derivation automatic. See section 10a.
+   **Still open.**
+4. **Class-anchor mode** — reconsider. Anchors were meant to re-derive `ClassPrivate` after a
+   restart, but ore nodes have no reachable `ClassPrivate`. If 1(c) works, anchors may be
+   unnecessary for them.
 5. **Consider fast-capture** — dump candidate regions to disk, analyse offline. A 2–5 minute
    inline scan cannot catch a sandworm and probably cannot catch a storm.
+
+**Also fixed in session 4: [#18](https://github.com/Project-Arrakis/dune-resource-scanner/issues/18)**
+— `FindNearbyXY` accepted NaN pairs (both guards were negations; every NaN comparison is
+false), producing ~17.4M of 17.4M hits in a scan. Fixed in PR #19: 623k hits, coverage
+unchanged at 211/211, peak RSS 12.6 GB → 165 MB.
+
+**PRs #17 and #19 are green on all four required checks but NOT merged** — the previous
+session's tooling declined the merge action. Merge them before building on `main`.
 
 ### Track B — data gathering
 
@@ -106,7 +133,12 @@ whose instance despawned silently vanishes from the map.
   off by 20×, event-type meanings, Leaflet calibration constants that match nothing in this
   codebase).
 - **Use a remote-side `timeout`** on every scan — a local `timeout ssh` leaves the remote process
-  running and CPU-pegged.
+  running and CPU-pegged. **Bound the working set inside the tool too**: a wall-clock timeout does
+  not stop a diagnostic from allocating its way toward an OOM on a host that also runs the live
+  game server. Session 4 had to kill one manually and re-verify the game PIDs afterwards.
+- **A scoring metric can look like a result.** Session 4's first type-discriminator search
+  reported a confident `pure = 15` that was pure artifact (`0x0` satisfies "all markers of this
+  type share a value"). Check what a metric actually rewards before believing its ranking.
 - **Never write session summaries or continuation prompts to `/tmp`.** They go in the repository,
   under `sessions/` — see [`README.md`](README.md) for the two file types and their lifecycles.
   `/tmp` is `tmpfs` on these hosts, so anything a future session needs to find would not survive a

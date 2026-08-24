@@ -1,0 +1,49 @@
+regions: exe=3 heap-like=405 (16.6 GB)
+pass1: read-error regions=8 (0.56 GB skipped)
+pass1: raw XY hits=623083 distinct positions=137044
+
+=== PASS-1 (raw XY transform present in scanned memory) ===
+type                      n   min-dist  <=100uu
+AzuriteOre                2        0.5        2
+AzuritePickup            11        0.3       11
+BasaltOre                 3        0.8        3
+BasaltPickup              3        0.7        3
+BauxiteOre                1        1.0        1
+BauxitePickup             1        0.8        1
+BrittleBush               5        0.7        5
+FuelCellPart             32        0.1       32
+FuelCellWreckage          9        0.3        9
+RhyoliteOre               2        0.3        2
+RhyolitePickup           22        0.1       22
+ScrapMetalPart           62        0.1       62
+ScrapMetalWreckage       39        0.3       39
+StravidiumOre             5        0.2        5
+StravidiumPickup          5        0.2        5
+TitaniumOre               5        0.5        5
+TitaniumPickup            4        0.4        4
+TOTAL                   211                 211  (100.0%)
+
+pass2: rootComponent candidates=623083  with>=1 pointer ref=835 (0.1%)  validated=92
+pass2: ValidateActor stage outcomes: ok=95 rej-classprivate=14 rej-classvtable=50 rej-vtable=4050 
+
+=== PASS-2 (fully validated actor) ===
+type                      n   min-dist  <=100uu
+AzuriteOre                2       66.3        1
+AzuritePickup            11      383.6        0
+BasaltOre                 3     2307.8        0
+BasaltPickup              3     2064.1        0
+BauxiteOre                1       18.8        1
+BauxitePickup             1      391.1        0
+BrittleBush               5      601.1        0
+FuelCellPart             32      243.6        0
+FuelCellWreckage          9      783.0        0
+RhyoliteOre               2      412.0        0
+RhyolitePickup           22        7.1        1
+ScrapMetalPart           62      380.2        0
+ScrapMetalWreckage       39      570.9        0
+StravidiumOre             5      689.0        0
+StravidiumPickup          5     1048.0        0
+TitaniumOre               5        8.7        2
+TitaniumPickup            4        2.5        1
+TOTAL                   211                   6  (2.8%)
+elapsed=80.11s maxrss=168512kB

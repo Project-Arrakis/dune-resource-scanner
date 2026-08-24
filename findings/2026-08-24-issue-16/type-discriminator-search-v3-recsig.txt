@@ -1,0 +1,27 @@
+plausible-Z hits: 106467
+hits matching spawn-record signature (base=hit-256, +0 heap ptr, +8 == 0x100000001): 274
+markers with >=1 hit: 152/211
+copies per marker: 1x:128 2x:24 
+
+top candidate type-discriminator offsets (pure = types whose every marker shares one value):
+  offset   pure  collisions  distinct  readable
+    -464      0           1         1       152
+    -976      0           1         1       152
+   -2032      0           1         1       152
+   -2024      0           1         1       152
+   -2016      0           1         1       152
+   -2008      0           1         1       152
+   -2000      0           1         1       152
+   -1992      0           1         1       152
+      80      0           1         1       152
+   -1976      0           1         1       152
+   -1968      0           1         1       152
+   -1960      0           1         1       152
+   -1952      0           1         1       152
+     504      0           1         1       152
+     496      0           1         1       152
+     488      0           1         1       152
+     480      0           1         1       152
+     472      0           1         1       152
+     464      0           1         1       152
+      72      0           1         1       152

@@ -1,0 +1,45 @@
+plausible-Z hits: 100956
+markers with >=1 hit: 211/211
+copies per marker: 6x:20 7x:1 8x:3 10x:39 11x:27 12x:38 13x:23 14x:4 15x:3 16x:24 17x:2 18x:8 20x:6 21x:3 30x:1 33x:1 36x:1 44x:1 56x:1 78x:1 97x:1 108x:1 162x:1 332x:1 
+
+top candidate type-discriminator offsets (pure = types whose every marker shares one value):
+  offset   pure  collisions  distinct  readable
+      32     15           3       249       211
+      24     15           4       241       211
+    -488     15           5        99       211
+    -712     15           5       222       211
+     240     15           5       104       211
+     -24     15           6       163       211
+    -152     15           6       136       211
+     464     15           6        78       211
+     296     15           6       348       211
+     408     15           7       112       211
+   -2000     15           7       119       211
+     -96     15           7       108       211
+     360     15           7       267       211
+   -1440     15           7       143       211
+     352     15           8       325       211
+   -1272     15           8       283       211
+     -48     15           8       137       211
+   -1328     15           8       155       211
+    -992     15           8       196       211
+     176     15           8       233       211
+
+=== values at offset 32, by marker type ===
+  AzuriteOre             0x40d54c636d18be28(313) 0x0(12) 0x409b273b8839d880(9) 0x56724cac2f98(2) +7 more
+  AzuritePickup          0x0(76) 0x56724cac2f98(11) 0xffffffff(10) 0x4097e7a33df78280(9) +23 more
+  BasaltOre              0x0(18) 0x56724cac2f98(3) 0xffffffff(2) 0xc1099eafd7177873(1) +6 more
+  BasaltPickup           0x0(15) 0x56724cac2f98(3)
+  BauxiteOre             0x409bd3007b75fa00(9) 0x0(6) 0xc064de1f9caa4085(1) 0x56724cac2f98(1) +1 more
+  BauxitePickup          0x409813925299c180(5) 0x0(5) 0x56724cac2f98(1) 0x40619c9294ce0cc1(1)
+  BrittleBush            0x0(30) 0x56724cac2f98(5) 0xffffffff(3) 0xbfd4f16c56c5dc25(1) +8 more
+  FuelCellPart           0x0(238) 0xffffffff(36) 0x56724cac2f98(32) 0xc105b43febb00016(7) +90 more
+  FuelCellWreckage       0x0(63) 0x56724cac2f98(10) 0xffffffff(9) 0x75f9178d1460(7) +33 more
+  RhyoliteOre            0x0(12) 0x56724cac2f98(2) 0xc05c77ec375cef1d(1) 0xc10803f35e26116a(1) +3 more
+  RhyolitePickup         0x0(160) 0x56724cac2f98(22) 0xffffffff(21) 0x40986a84d1cd8b80(9) +61 more
+  ScrapMetalPart         0x0(501) 0x40ca02645a2ddbd0(129) 0xffffffff(88) 0x56724cac2f98(66) +228 more
+  ScrapMetalWreckage     0x0(297) 0xffffffff(44) 0x56724cac2f98(43) 0xc1087cab86687824(18) +117 more
+  StravidiumOre          0x0(36) 0xc10a5ae0147ae13f(11) 0x75f9a03ffb00(10) 0xffffffff(5) +23 more
+  StravidiumPickup       0x0(25) 0xc10799c17f584a0c(7) 0x56724cac2f98(5)
+  TitaniumOre            0x0(30) 0x409c506ba52a9380(9) 0x409ad8ea02859580(9) 0x56724cac2f98(5) +16 more
+  TitaniumPickup         0x0(20) 0x409b902e7dcad200(9) 0x56724cac2f98(4) 0x4076c0b9f72b48b0(1)

@@ -1,0 +1,221 @@
+seed hits: 13
+  seed 0x75f89372d0c0 (region 0x75f8936b0000-0x75f893d76000, 7.1 MB): 9234 plausible records extracted
+  seed 0x75f8ab3af980 (region 0x75f8ab340000-0x75f8ab887000, 5.5 MB): 9258 plausible records extracted
+  seed 0x75f8d72754e0 (region 0x75f8bdced000-0x75f8dc530000, 512.0 MB): 16802 plausible records extracted
+  seed 0x75f971bb6bb8 (region 0x75f90973e000-0x75f976350000, 1824.6 MB): 31683 plausible records extracted
+  seed 0x75f972137610 (region 0x75f90973e000-0x75f976350000, 1824.6 MB): 27595 plausible records extracted
+  seed 0x75f972137628 (region 0x75f90973e000-0x75f976350000, 1824.6 MB): 25693 plausible records extracted
+  seed 0x75f972137688 (region 0x75f90973e000-0x75f976350000, 1824.6 MB): 26043 plausible records extracted
+  seed 0x75fa5f023640 (region 0x75f978157000-0x75fa68021000, 4025.3 MB): 18506 plausible records extracted
+  seed 0x75fa5f2c13b0 (region 0x75f978157000-0x75fa68021000, 4025.3 MB): 16690 plausible records extracted
+  seed 0x75fa5f6326c0 (region 0x75f978157000-0x75fa68021000, 4025.3 MB): 17349 plausible records extracted
+  seed 0x75fa5f63b1b0 (region 0x75f978157000-0x75fa68021000, 4025.3 MB): 16662 plausible records extracted
+
+=== array at 0x75f89372cfc0: 9234 records -> 4/211 markers matched (1.9%) ===
+   AzuriteOre               0/  2
+   AzuritePickup            0/ 11
+   BasaltOre                0/  3
+   BasaltPickup             0/  3
+   BauxiteOre               0/  1
+   BauxitePickup            0/  1
+   BrittleBush              0/  5
+   FuelCellPart             1/ 32
+   FuelCellWreckage         0/  9
+   RhyoliteOre              0/  2
+   RhyolitePickup           0/ 22
+   ScrapMetalPart           1/ 62
+   ScrapMetalWreckage       1/ 39
+   StravidiumOre            0/  5
+   StravidiumPickup         0/  5
+   TitaniumOre              1/  5
+   TitaniumPickup           0/  4
+
+=== array at 0x75f8ab3af880: 9258 records -> 6/211 markers matched (2.8%) ===
+   AzuriteOre               0/  2
+   AzuritePickup            0/ 11
+   BasaltOre                0/  3
+   BasaltPickup             0/  3
+   BauxiteOre               0/  1
+   BauxitePickup            0/  1
+   BrittleBush              0/  5
+   FuelCellPart             1/ 32
+   FuelCellWreckage         0/  9
+   RhyoliteOre              0/  2
+   RhyolitePickup           0/ 22
+   ScrapMetalPart           2/ 62
+   ScrapMetalWreckage       2/ 39
+   StravidiumOre            0/  5
+   StravidiumPickup         0/  5
+   TitaniumOre              1/  5
+   TitaniumPickup           0/  4
+
+=== array at 0x75f8d72753e0: 16802 records -> 74/211 markers matched (35.1%) ===
+   AzuriteOre               2/  2
+   AzuritePickup            0/ 11
+   BasaltOre                3/  3
+   BasaltPickup             0/  3
+   BauxiteOre               1/  1
+   BauxitePickup            0/  1
+   BrittleBush              2/  5
+   FuelCellPart             6/ 32
+   FuelCellWreckage         7/  9
+   RhyoliteOre              2/  2
+   RhyolitePickup           0/ 22
+   ScrapMetalPart          19/ 62
+   ScrapMetalWreckage      22/ 39
+   StravidiumOre            5/  5
+   StravidiumPickup         0/  5
+   TitaniumOre              5/  5
+   TitaniumPickup           0/  4
+
+=== array at 0x75f971bb6ab8: 31683 records -> 33/211 markers matched (15.6%) ===
+   AzuriteOre               1/  2
+   AzuritePickup            1/ 11
+   BasaltOre                2/  3
+   BasaltPickup             0/  3
+   BauxiteOre               1/  1
+   BauxitePickup            0/  1
+   BrittleBush              1/  5
+   FuelCellPart             7/ 32
+   FuelCellWreckage         2/  9
+   RhyoliteOre              1/  2
+   RhyolitePickup           2/ 22
+   ScrapMetalPart           7/ 62
+   ScrapMetalWreckage       3/ 39
+   StravidiumOre            2/  5
+   StravidiumPickup         0/  5
+   TitaniumOre              3/  5
+   TitaniumPickup           0/  4
+
+=== array at 0x75f972137510: 27595 records -> 80/211 markers matched (37.9%) ===
+   AzuriteOre               1/  2
+   AzuritePickup            3/ 11
+   BasaltOre                0/  3
+   BasaltPickup             0/  3
+   BauxiteOre               0/  1
+   BauxitePickup            0/  1
+   BrittleBush              2/  5
+   FuelCellPart            13/ 32
+   FuelCellWreckage         5/  9
+   RhyoliteOre              1/  2
+   RhyolitePickup           9/ 22
+   ScrapMetalPart          30/ 62
+   ScrapMetalWreckage      13/ 39
+   StravidiumOre            1/  5
+   StravidiumPickup         0/  5
+   TitaniumOre              2/  5
+   TitaniumPickup           0/  4
+
+=== array at 0x75f972137528: 25693 records -> 77/211 markers matched (36.5%) ===
+   AzuriteOre               1/  2
+   AzuritePickup            3/ 11
+   BasaltOre                0/  3
+   BasaltPickup             0/  3
+   BauxiteOre               0/  1
+   BauxitePickup            0/  1
+   BrittleBush              2/  5
+   FuelCellPart            13/ 32
+   FuelCellWreckage         5/  9
+   RhyoliteOre              1/  2
+   RhyolitePickup           9/ 22
+   ScrapMetalPart          29/ 62
+   ScrapMetalWreckage      11/ 39
+   StravidiumOre            1/  5
+   StravidiumPickup         0/  5
+   TitaniumOre              2/  5
+   TitaniumPickup           0/  4
+
+=== array at 0x75f972137588: 26043 records -> 78/211 markers matched (37.0%) ===
+   AzuriteOre               1/  2
+   AzuritePickup            3/ 11
+   BasaltOre                0/  3
+   BasaltPickup             0/  3
+   BauxiteOre               0/  1
+   BauxitePickup            0/  1
+   BrittleBush              2/  5
+   FuelCellPart            13/ 32
+   FuelCellWreckage         5/  9
+   RhyoliteOre              1/  2
+   RhyolitePickup           9/ 22
+   ScrapMetalPart          30/ 62
+   ScrapMetalWreckage      11/ 39
+   StravidiumOre            1/  5
+   StravidiumPickup         0/  5
+   TitaniumOre              2/  5
+   TitaniumPickup           0/  4
+
+=== array at 0x75fa5f023540: 18506 records -> 41/211 markers matched (19.4%) ===
+   AzuriteOre               1/  2
+   AzuritePickup            2/ 11
+   BasaltOre                0/  3
+   BasaltPickup             1/  3
+   BauxiteOre               0/  1
+   BauxitePickup            1/  1
+   BrittleBush              1/  5
+   FuelCellPart             5/ 32
+   FuelCellWreckage         2/  9
+   RhyoliteOre              1/  2
+   RhyolitePickup           3/ 22
+   ScrapMetalPart          14/ 62
+   ScrapMetalWreckage       6/ 39
+   StravidiumOre            0/  5
+   StravidiumPickup         2/  5
+   TitaniumOre              2/  5
+   TitaniumPickup           0/  4
+
+=== array at 0x75fa5f2c12b0: 16690 records -> 38/211 markers matched (18.0%) ===
+   AzuriteOre               1/  2
+   AzuritePickup            2/ 11
+   BasaltOre                0/  3
+   BasaltPickup             1/  3
+   BauxiteOre               0/  1
+   BauxitePickup            0/  1
+   BrittleBush              2/  5
+   FuelCellPart             4/ 32
+   FuelCellWreckage         2/  9
+   RhyoliteOre              1/  2
+   RhyolitePickup           5/ 22
+   ScrapMetalPart          10/ 62
+   ScrapMetalWreckage       6/ 39
+   StravidiumOre            1/  5
+   StravidiumPickup         0/  5
+   TitaniumOre              2/  5
+   TitaniumPickup           1/  4
+
+=== array at 0x75fa5f6325c0: 17349 records -> 85/211 markers matched (40.3%) ===
+   AzuriteOre               1/  2
+   AzuritePickup            4/ 11
+   BasaltOre                1/  3
+   BasaltPickup             1/  3
+   BauxiteOre               1/  1
+   BauxitePickup            0/  1
+   BrittleBush              1/  5
+   FuelCellPart            15/ 32
+   FuelCellWreckage         2/  9
+   RhyoliteOre              0/  2
+   RhyolitePickup          11/ 22
+   ScrapMetalPart          23/ 62
+   ScrapMetalWreckage      16/ 39
+   StravidiumOre            2/  5
+   StravidiumPickup         2/  5
+   TitaniumOre              2/  5
+   TitaniumPickup           3/  4
+
+=== array at 0x75fa5f63b0b0: 16662 records -> 52/211 markers matched (24.6%) ===
+   AzuriteOre               1/  2
+   AzuritePickup            2/ 11
+   BasaltOre                0/  3
+   BasaltPickup             1/  3
+   BauxiteOre               0/  1
+   BauxitePickup            0/  1
+   BrittleBush              2/  5
+   FuelCellPart            13/ 32
+   FuelCellWreckage         2/  9
+   RhyoliteOre              1/  2
+   RhyolitePickup           5/ 22
+   ScrapMetalPart          15/ 62
+   ScrapMetalWreckage       6/ 39
+   StravidiumOre            1/  5
+   StravidiumPickup         0/  5
+   TitaniumOre              2/  5
+   TitaniumPickup           1/  4
