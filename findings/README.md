@@ -165,6 +165,17 @@ against another map's actors).
 | ⚠️ | **Every per-type count is *not checkable*, not wrong** — Hagga accumulates discoveries forever, DD is re-rolled per Coriolis seed. `long_range` content, which *is* server-independent, agrees within 1.36× with three exact matches |
 | ✅ | All 26 named POI/vendor/trainer/House types exist; the SQL works; `field_kind_id` semantics correct |
 
+### 2026-08-24 — Hagga's live process is `Survival_1`, not `Overmap`; the Jasmium discovery test finally ran
+
+**[`2026-08-24-hagga-live-process-and-jasmium/`](2026-08-24-hagga-live-process-and-jasmium/)**
+
+| | |
+|---|---|
+| ❌ | *Corrected*: `sessions/CONTINUATION-PROMPT.md`'s environment note ("Hagga Basin = the `Overmap` process") named the wrong process for live scanning. `dune.farm_state` shows `Overmap` at 0 connected players; the operator's actual session was on `Survival_1`. Scanning `Overmap` returned a static, geographically-clustered 112 records across three scans over 15 minutes, including one with the operator standing on a node — because that process was never running the operator's world |
+| ✅ | The original `2026-08-24-validation/` Hagga numbers (58.5% recall, PID 2772183) were unaffected — that PID was `Survival_1` correctly at the time. Only this session's environment note, not the earlier data, was wrong |
+| ✅ | **The Jasmium discovery test, queued since an earlier session, finally ran live**: operator discovered `JasmiumOre`/`JasmiumPickup` (zero prior `dune.markers` rows anywhere) in Hagga's "Shoel" sector. Scanning the correct process while standing on a node: only 6.1% of the 33 new markers matched within the standard 1 m threshold — but **100% (33/33) had a census record within 151 m**, most within 7-40 m. The census does find brand-new, just-discovered nodes; the fixed 1 m match radius understates recall for this type specifically |
+| ❓ | Why Jasmium's positional offset runs larger than other types' — not established. Operator confirms Jasmium is the only ore type exclusive to Hagga (every other ore/pickup type is shared with DD), a plausible but unverified explanation if its Blueprint class doesn't follow the shared cross-map hierarchy. Whether other low-recall types (DD's `*Pickup` gap, Hagga's `ErythriteOre` at 5.3%) show the same "close but past a too-strict threshold" pattern if re-checked with a looser radius — not checked |
+
 ## Accuracy audit — 2026-08-24
 
 An operator challenge ("I thought we had the data to prove node types") triggered a full
