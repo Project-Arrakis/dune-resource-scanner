@@ -212,24 +212,66 @@ That is a genuine negative result, recorded so it is not re-derived: **the resou
 type does not appear to live in the record, in what it points at, or in its
 placement.**
 
-### Honest caveat: the 80,803 unmatched records are NOT all undiscovered nodes
+### CORRECTED: the unmatched records may well be real nodes after all
 
-It is tempting to read 85,788 records against 7,934 discovered markers as "the map
-has 10x more nodes than anyone has found". The data does not support that:
+**This section previously claimed the 80,803 unmatched records were "NOT all
+undiscovered nodes", citing a Z-profile gap of 18,058 vs 3,715. That claim was
+largely wrong and is corrected here in the same session it was made.**
 
-- **Z profile differs sharply** — matched records have a median Z of **3,715**;
-  unmatched, **18,058**. Real nodes sit on terrain.
-- **Density is too high even where exploration is good** — in the best-explored
-  270,000 uu cell the ratio is **5.5x** (808 markers, 4,425 records), and 1.3-4.5x
-  in the next five.
-- Unmatched records also extend beyond the explored bounding box in X and Y.
+The Z gap was mostly **exploration bias, not object type**:
 
-So the record set contains other spawn-record-shaped objects besides resource nodes.
-**Do not present this census as a complete node map.** Separating the two is work
-that has not been done.
+| | median Z |
+|---|---:|
+| Records in well-explored cells (>=200 markers) | **4,701** |
+| Records elsewhere | **19,317** |
+| All DD markers | 3,229 |
 
-On the positive side, the records are not duplicates: **84,744 distinct positions out
-of 85,788**, against the shipped scanner's 96 results collapsing to 42.
+Exploration is concentrated in low-lying terrain; the unexplored north (Shield
+Wall) is simply high ground. Controlled to well-explored cells only, the gap
+between marker-matched and unmatched records collapses from 3,715 vs 18,058 to
+**3,559 vs 7,060**. The density argument weakens for the same reason.
+
+A structural test then ruled out the "they are different objects" reading
+outright. Deriving a signature from the 5,899 marker-confirmed records —
+**47 of 48 record fields agree perfectly across all of them** — and applying it
+map-wide:
+
+| | |
+|---|---:|
+| Records passing the confirmed-node signature | **82,682 / 85,784 (96.4%)** |
+| Records rejected | 3,102 (3.6%) |
+
+**96.4% of all records are structurally indistinguishable from confirmed nodes.**
+There is no structural signal separating "node" from "not node", most plausibly
+because most of them *are* nodes.
+
+**Why this cannot be settled from data alone.** This is a positive-unlabelled
+problem: "no marker here" does not mean "no node here", because ore and scrap
+markers (`long_range=false`) only appear on close approach. No amount of
+re-analysis fixes that — it needs a ground-truth visit.
+
+Two genuine data-quality issues did surface, both minor and filterable:
+
+- **1,709 records (2.0%) sit within 1,000 uu of the world origin** and are junk;
+  567 are inside 100 uu, including 43 at exactly `(1,1,1)`. `census.go`'s
+  `plausibleXY` accepts any \|v\| >= 1, which is too permissive.
+- **1,051 duplicate positions** (84,733 distinct out of 85,784).
+
+### Ground-truth validation targets
+
+Three clusters of predicted nodes in terrain with **no known marker within
+8,000 uu**, i.e. never explored. A positive result proves the scanner finds
+undiscovered nodes, which is precisely the post-storm capability. Z is +200 so
+the operator lands above ground:
+
+```
+dune admin teleport '<fls-id>'  185338  711895  2180     # 141 predictions nearby
+dune admin teleport '<fls-id>' -579810  515940  2133     # 125 predictions nearby
+dune admin teleport '<fls-id>'  500113  214825  3288     # 110 predictions nearby
+```
+
+Needs `DUNE_ADMIN_ASSUME_YES=1`, and per §6c wait several seconds before
+re-reading position.
 
 ## Where the next session should start
 

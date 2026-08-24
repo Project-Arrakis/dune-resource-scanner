@@ -1,0 +1,21 @@
+map: DeepDesert   rows for this map: 110 of 141   memory actors: 909
+21-bit signed range: -1048576 .. 1048575
+
+=== claim 1: representability ===
+real marker extent: X -1172411..1055765  Y -1092600..1121130
+markers beyond the 21-bit limit: 1237/9601 (12.9%) -- these positions CANNOT be encoded
+
+=== claim 2: are misses caused by overflow? ===
+bit 63 (unused by a 21/21/21 packing): {0: 110}
+decoded within 50uu of a memory actor: 91/110 (82.7%)
+misses: 19   of which within 10% of the limit: 0
+largest |coordinate| among MISSES: 803675
+largest |coordinate| among ALL rows: 1044975
+=> misses are NOT range-overflow cases: every one is comfortably in range.
+misses rescued by un-aliasing (+/-2^21 on either axis): 0/19
+
+=== is the decode wrong on the misses, or is memory incomplete? ===
+decoded Z, matched rows (n=91): p10=1613 med=4010 p90=7514
+decoded Z, missed rows  (n=19): p10=2070 med=3735 p90=6604
+Indistinguishable distributions of plausible terrain heights mean the decode is
+working on the misses too -- they are absent from the memory scan, not mis-decoded.
