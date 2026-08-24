@@ -8,6 +8,15 @@ This project has not yet cut a tagged release; entries are grouped under
 
 ## [Unreleased]
 
+### Fixed
+
+- `FindNearbyXY` no longer accepts NaN pairs. Both range guards were written as
+  "skip if outside tolerance", and every comparison involving NaN is false, so
+  NaN fell through both and matched every target at every tolerance. 16 bytes of
+  `0xFF` (two int64 `-1`s) is the common source. A single live scan produced
+  ~17.4M spurious hits from this — almost all of its runtime and its 12.6 GB
+  peak RSS ([#18]).
+
 ### Added
 
 - Initial scaffold and clean-room design notes (`CONTINUATION.md`).
@@ -20,4 +29,5 @@ This project has not yet cut a tagged release; entries are grouped under
   modes, JSON output.
 - CI: build/vet/test on every push and PR to `main`; org-shared
   `reusable-security-scan.yml` (gitleaks, semgrep, trivy).
+
 [#18]: https://github.com/Project-Arrakis/dune-resource-scanner/issues/18
