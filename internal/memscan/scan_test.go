@@ -143,3 +143,53 @@ func TestFindPointerReferencesMulti_EmptyTargetsFindsNothing(t *testing.T) {
 		t.Fatalf("expected 0 refs against an empty target set, got %d: %+v", len(refs), refs)
 	}
 }
+
+// Issue #18: every comparison involving NaN is false, so a guard written as
+// "skip if outside tolerance" never fires for NaN and lets it fall through.
+// The byte pattern used here is two int64 -1 values (16 bytes of 0xFF), one of
+// the most common patterns in a live process's memory -- not a hand-written
+// math.NaN() literal, so the test reflects how this actually reaches the
+// scanner.
+func TestFindNearbyXY_RejectsNaNBytePattern(t *testing.T) {
+	buf := make([]byte, 16)
+	for i := range buf {
+		buf[i] = 0xFF
+	}
+	if hits := FindNearbyXY(buf, 0x1000, -4368, -198837, 15000); len(hits) != 0 {
+		t.Fatalf("expected 16 bytes of 0xFF (two NaNs) to be rejected, got %d hit(s)", len(hits))
+	}
+}
+
+func TestFindNearbyXY_RejectsNaNInEitherComponent(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		x, y float64
+	}{
+		{"NaN x, real y", math.NaN(), -198837},
+		{"real x, NaN y", -4368, math.NaN()},
+		{"both NaN", math.NaN(), math.NaN()},
+		{"Inf x", math.Inf(1), -198837},
+		{"Inf y", -4368, math.Inf(-1)},
+	} {
+		buf := make([]byte, 16)
+		binary.LittleEndian.PutUint64(buf[0:8], math.Float64bits(tc.x))
+		binary.LittleEndian.PutUint64(buf[8:16], math.Float64bits(tc.y))
+		if hits := FindNearbyXY(buf, 0x1000, -4368, -198837, 15000); len(hits) != 0 {
+			t.Fatalf("%s: expected rejection, got %d hit(s)", tc.name, len(hits))
+		}
+	}
+}
+
+// A real position must still be found -- the fix must not over-reject.
+func TestFindNearbyXY_StillFindsRealPositionAfterNaNGuard(t *testing.T) {
+	buf := make([]byte, 32)
+	for i := 0; i < 16; i++ {
+		buf[i] = 0xFF // leading NaN pair, must be skipped
+	}
+	binary.LittleEndian.PutUint64(buf[16:24], math.Float64bits(-3814.5))
+	binary.LittleEndian.PutUint64(buf[24:32], math.Float64bits(-198877.25))
+	hits := FindNearbyXY(buf, 0x1000, -4368, -198837, 15000)
+	if len(hits) != 1 || hits[0] != 0x1000+16 {
+		t.Fatalf("expected exactly one hit at 0x1010, got %v", hits)
+	}
+}
