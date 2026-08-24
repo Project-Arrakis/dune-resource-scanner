@@ -971,7 +971,15 @@ Same per-type structure on both: ore/rock 68-89%, scrap/fuel/bush 51-73%, small
 `*Pickup` 15-30%, POIs 0%. Hagga-exclusive `PrimroseField` scores 72.4%. So the approach
 is **map-independent and process-independent**, and survives a restart.
 
-**The one dependency that is NOT established: zero players.** Every scan this session ran
+**RESOLVED 2026-08-24: zero players is NOT a dependency.** The operator logged out and the
+experiment was run. With **zero** online players the DeepDesert process stayed alive through
+T+120/240/330/420/540 s -- well past the autoscaler's 300 s grace period, and the autoscaler
+was confirmed running -- and a full census then returned **84,569 records at 64.0% marker
+coverage, identical to the 64.0% measured with a player online**. **The post-storm path has
+no player dependency.** The superseded reasoning follows, kept because it shows what was
+actually measured before the test:
+
+**~~The one dependency that is NOT established: zero players.~~** Every scan this session ran
 while `dune admin players --online` reported `<character>` as Online on `DeepDesert_1`
 partition 8, even when the operator was not actually playing. Since `dune-autoscaler`
 despawns a 0-player instance after 300s, no instance means nothing to scan. Section 5c
