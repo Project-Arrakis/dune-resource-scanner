@@ -1,0 +1,33 @@
+########## UNFILTERED, exclusive purity ##########
+plausible-Z hits: 102751
+markers with >=1 hit: 211/211
+copies per marker: 8x:20 9x:1 10x:3 12x:39 13x:28 14x:38 15x:22 16x:4 17x:3 18x:18 19x:2 20x:10 22x:9 23x:3 24x:1 32x:1 36x:1 41x:1 47x:1 59x:1 80x:1 96x:1 112x:1 166x:1 334x:1 
+
+top candidate type-discriminator offsets (pure = types whose every marker shares one value):
+  offset   pure  collisions  distinct  readable
+     -16     11          81       618       211
+      96      9          60       743       211
+    -480      5          58      1139       211
+    -544      5          73       487       211
+     136      4          51       847       211
+     128      4          74       898       211
+    -504      2         173       977       211
+     344      2         174       968       211
+     336      2         204      1209       211
+    -512      2         207      1665       211
+    -448      2         209      1264       211
+    -440      2         218      1514       211
+     392      2         224      1918       211
+     384      2         243      1588       211
+     352      1          56      1038       211
+    -192      1          76       762       211
+     200      1          78       917       211
+      48      1          82       933       211
+      56      1         101      1263       211
+     192      1         102      1133       211
+
+=== values at offset -16, by marker type ===
+  AzuriteOre             0x0(10) 0xfffffff500000000(4) 0xffffffcd00000001(4) 0xffffffcc00000000(4) +161 more
+  AzuritePickup          0x0(35) 0x9a716500000000(22) 0x1(11) 0xfffffff6ffffffff(8) +33 more
+  BasaltOre              0x0(9) 0x9a716d00000000(6) 0xfffffff500000000(4) 0xc1096777d65c91bf(3) +9 more
+  BasaltPickup           0x0(9) 0x9a717300000000(6) 0xfffffff500000000(4) 0x1(3) +1 more
