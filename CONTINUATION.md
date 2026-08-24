@@ -198,6 +198,18 @@ Raw decoded values are world units — **no scaling**. Verified against memory-s
 memory scanner is *not* required on the Live Map's data path. Decode from string/BigInt —
 `field_id` exceeds `Number.MAX_SAFE_INTEGER` and a JS `Number` silently loses low bits.
 
+**Limit found 2026-08-24: the packing cannot represent the whole map.** Three 21-bit signed
+fields give a range of -1,048,576 .. +1,048,575, but Deep Desert extends to about ±1.27M --
+**1,237 of 9,601 real DD markers (12.9%) lie beyond it**, and bit 63 is unused (`0` in all 141
+rows), so there is no escape flag. This layer is therefore only demonstrated for the inner
+~87% of the map. Reported by another developer as the cause of decode failures; **that part
+did not reproduce** -- of 19 DD rows whose decode misses memory, **none** is near the limit
+(largest magnitude 803,675), while the most extreme value in the whole set, 1,044,975, decodes
+correctly, and un-aliasing by ±2^21 rescues none. The misses' decoded Z distribution is
+indistinguishable from the matches', so the decode is working and those fields are simply
+absent from the memory scan -- the same under-count already recorded in section 8. See
+`findings/2026-08-24-field-id-21bit/`.
+
 ### 3. Resource positions are static per map and identical across instances
 
 Full set diff of two independent DeepDesert processes (partition 32 vs partition 8):
@@ -827,11 +839,27 @@ unambiguous single-type label):
 
 **The type does not live in the record, in what it points at, or in its placement.**
 
-**Honest caveat -- do not read 85,788 records as "10x more nodes than discovered".**
-The unmatched 80,803 are not all undiscovered nodes: their median Z is **18,058**
-against **3,715** for confirmed ones, the record:marker ratio is **5.5x** even in the
-best-explored 270,000 uu cell, and they extend beyond the explored bounding box. The
-set contains other spawn-record-shaped objects. Separating them is undone work.
+**Caveat, CORRECTED same session.** An earlier version of this section claimed the
+unmatched 80,803 records were "not all undiscovered nodes", citing a Z gap of 18,058
+vs 3,715. **That was largely wrong.** The gap is mostly exploration bias: records in
+well-explored cells have median Z **4,701**, records elsewhere **19,317** -- the
+operator explored the low ground, and the unexplored north is high terrain. Controlled
+to well-explored cells the gap collapses to **3,559 vs 7,060**.
+
+A structural test then ruled out the "different objects" reading: a signature derived
+from the 5,899 marker-confirmed records (**47 of 48 fields agree across all of them**)
+passes **82,682 of 85,784 records (96.4%)** map-wide. There is no structural signal
+separating node from non-node, most plausibly because most of them are nodes.
+
+This **cannot be settled from data alone** -- it is a positive-unlabelled problem,
+since `long_range=false` resource markers only appear on close approach, so "no marker"
+never means "no node". It needs a ground-truth visit; three validation sites in
+never-explored terrain are recorded in `findings/2026-08-24-issue-16/README.md`.
+
+Two real data-quality issues did surface: **1,709 records (2.0%) sit within 1,000 uu of
+the world origin** and are junk (567 within 100 uu, 43 at exactly `(1,1,1)`) --
+`census.go`'s `plausibleXY` accepting any `|v| >= 1` is too permissive -- and there are
+1,051 duplicate positions.
 
 ### 4c. POIs are NOT discovery-limited -- every one is `long_range`, so the DB is their complete source
 
@@ -938,7 +966,7 @@ buildings, and storm/worm activity. Current source-by-source status:
 
 | Layer | Source | State |
 |---|---|---|
-| Spice (3 tiers), Flour Sand | `resourcefield_state` + `field_id` decode | **Ready** -- exact, live, both maps |
+| Spice (3 tiers), Flour Sand | `resourcefield_state` + `field_id` decode | **Ready for the inner ~87% of the map** -- exact and live, but the 21-bit packing cannot represent \|x\| or \|y\| beyond 1,048,575, where 12.9% of real DD markers sit (see section 2) |
 | Ore / stone / flora nodes | scanner + class->name | **Blocked on #16** |
 | Named POIs (cave, ecolab/testing station, shipwreck, sietch, vendor, camp, hazard) | `dune.markers` where `long_range=true` | **Ready and complete** -- every POI row on both maps is `long_range` and named, so these are revealed at range rather than by visiting (see 4c). Not discovery-limited, and the scanner is not needed for this layer. Post-storm repopulation timing is still unobserved. |
 | Player bases, storage, vehicles, players | existing `liveMap*` queries in Core | **Already shipped** |
