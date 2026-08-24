@@ -45,6 +45,15 @@ type-attribution routes are ruled out — the actor chain, all 48 record offsets
 undiscovered nodes** (median Z 18,058 vs 3,715; 5.5x the markers even in the best-explored
 cell) — do not present the census as a complete map.
 
+**Validated 2026-08-24:** the census finds **undiscovered** nodes — 60.2% of 1,667 markers
+discovered *after* the scan was captured, vs 64.8% of already-known ones. It also transfers
+across maps and process restarts (HaggaBasin 58.5% vs DeepDesert 64.3%, same per-type
+structure). **Discovery is not required.** The one untested dependency is **zero players**:
+every scan ran while a session was registered Online on `DeepDesert_1`, and the autoscaler
+despawns 0-player instances after 300s. Test that first — log fully out of DD, confirm
+nobody is on the map, wait past 300s, re-run the census. Ten minutes, closes the last open
+question on the post-storm path.
+
 1. **[#16](https://github.com/Project-Arrakis/dune-resource-scanner/issues/16) — still the
    blocker, but it is a redesign, not a bug fix.** Next steps, cheapest first:
    (a) relax the spawn-record signature (the `+8 == 0x0000000100000001` constant is
@@ -115,8 +124,27 @@ normalisation on 4096×4096 images — **reuse it; do not introduce a second cal
 Known bug to fix while there: `liveMapBases()` filters `coalesce(a.partition_id,0) > 0`, so a base
 whose instance despawned silently vanishes from the map.
 
+## Two experiments left over from 2026-08-24, both cheap
+
+1. **Zero-player scan (settles the last post-storm dependency).** Every scan so far ran
+   while a session was registered Online on `DeepDesert_1`. Log fully out of DD, confirm
+   `dune admin players --online` shows nobody on that map, wait past the autoscaler's
+   300 s grace period, then re-run `census.go`. If it still returns marker-validated data,
+   the post-storm path needs no player at all; if the process is gone, the Live Map must
+   trigger its scan while someone is on the map.
+2. **Walk-to validation (teleport does NOT work — see §6c).** Targets, controls and the
+   exact before-state are in `findings/2026-08-24-issue-16/README.md`. Four predictions
+   ~100 m from the operator's DD base, in terrain with no marker within ±6 km. A positive
+   result would also yield the first *labelled* records in unexplored terrain, which is
+   what type attribution has always lacked.
+
 ## Working practices that matter
 
+- **`dune admin teleport` does not work** (re-tested 2026-08-24 at long range, a second
+  long-range target, and a 3,000 uu hop inside loaded terrain -- all `publish=ok`, exit 0,
+  zero movement). §6c's 2026-08-22 "it works with a delay" correction is wrong or the
+  behaviour regressed. **Do not plan validation that depends on teleporting the operator**
+  -- pick targets near where they already are.
 - **Operator must be stationary before any scan.** The scanner reads `-near` at launch and runs
   2–5 minutes. Two scans were wasted when the operator travelled mid-scan and the empty results
   looked like real negative findings.
