@@ -8,6 +8,13 @@ This project has not yet cut a tagged release; entries are grouped under
 
 ## [Unreleased]
 
+### Fixed
+
+- `ValidTransform` now rejects denormal / sub-micrometre non-zero coordinates,
+  `Inf` on any axis, and out-of-world `Z` (previously only X and Y were
+  bounded, so any finite garbage `Z` passed). Uninitialized memory reading as
+  `6.8e-310` was being reported as a real actor ([#14]).
+
 ### Added
 
 - Initial scaffold and clean-room design notes (`CONTINUATION.md`).
@@ -20,3 +27,5 @@ This project has not yet cut a tagged release; entries are grouped under
   modes, JSON output.
 - CI: build/vet/test on every push and PR to `main`; org-shared
   `reusable-security-scan.yml` (gitleaks, semgrep, trivy).
+
+[#14]: https://github.com/Project-Arrakis/dune-resource-scanner/issues/14
