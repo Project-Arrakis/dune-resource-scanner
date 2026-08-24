@@ -74,6 +74,19 @@ Root cause, established 2026-08-24 and evidenced in `findings/2026-08-24-issue-1
   HaggaBasin** — map-independent and process-independent, surviving a restart with fresh
   ASLR.
 
+### The name table is now fully decoded — but type attribution is still blocked
+
+`findings/2026-08-24-namepool-decode/` cracked the FNamePool block format (verified against
+1,771 consecutive live entries, zero failures) and it reveals the complete resource
+taxonomy for every mineral. **This does not solve type attribution.** Neither live-confirmed
+ground-truth record (StravidiumOre, TitaniumOre) contains a direct reference into the pool
+— checked, not assumed, against a computed chance-match baseline. Current best theory:
+census records are a pre-actor "spawn slot" layer with no class identity of their own; a
+real actor (with a name resolvable through this pool) likely only exists once something,
+plausibly proximity, promotes a slot. **Testable**: predict a node, walk to it, immediately
+re-scan while still standing there, check whether it now resolves to an actor it didn't
+before.
+
 ### Type attribution — four routes ruled out, do not re-derive
 
 | Route | Result |

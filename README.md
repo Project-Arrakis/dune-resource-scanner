@@ -16,7 +16,8 @@ empty and no database can answer the question.
 |---|---|
 | Node **positions**, including ones nobody has discovered | ✅ ~60–64% recall, whole map, 17 s |
 | **Naming a class** — "this class is TitaniumOre" | ✅ Works. Scan a coordinate the game already labels; 1–3 confirmations per class |
-| **Typing the nodes the census finds** | ❌ Cannot. Only ~3% of nodes appear as actors that carry a class; the census's 72% carry none |
+| **Reading the game's own name table** | ✅ Fully decoded and verified (1,771/1,771 entries) — reveals the complete resource taxonomy |
+| **Typing the nodes the census finds** | ❌ Still cannot. Neither known ground-truth record references the name table directly — census records appear to be a pre-actor layer with no class identity of their own |
 | Spice and Flour Sand from the database | ⚠️ Exact, but only the inner ~87% of the map |
 | Named points of interest from the database | 🔹 Every POI row is revealed at range; completeness is inferred |
 | Works with **zero players online** | ✅ Proven — 64.0% coverage with nobody logged in, identical to a with-player scan |
