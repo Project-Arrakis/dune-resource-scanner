@@ -5,8 +5,7 @@ game server's own process memory, so a live map can show where resources are **i
 after a Coriolis storm regenerates Deep Desert** — when the game's own marker table is
 empty and no database can answer the question.
 
-📊 **[Findings — what is established, disproved, and still open](https://project-arrakis.github.io/dune-resource-scanner/)**
-· [same index as Markdown](findings/README.md)
+📊 **[Findings — what is established, disproved, and still open](findings/README.md)**
 
 > Read the rendered findings page for the results. This README covers what the tool is and
 > how to run it.
@@ -76,12 +75,12 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ./cmd/dune-resource-scanner
 
 ## Contributing to the docs
 
-`findings/README.md` is the single source for the findings page. After editing it:
+`findings/README.md` is the shareable artifact — it renders directly on GitHub and pastes
+cleanly into Discord. After editing it, run the PII guard before pushing:
 
 ```sh
-python3 tools/build-findings-page.py     # regenerate docs/index.html
 ./tools/check-public-safe.sh             # no PII or internal addresses
 ```
 
-CI enforces both, plus `gofmt`, `go vet`, `go test -race`, shellcheck, and
+CI enforces this, plus `gofmt`, `go vet`, `go test -race`, shellcheck, and
 gitleaks/semgrep/trivy.
