@@ -428,6 +428,7 @@ Every row below was confirmed by the operator gathering a single node and diffin
 | `BrittleBush` | `PlantFiber` | Plant Fiber |
 | `RhyoliteOre` / `RhyolitePickup` | `Stone` | **Granite Stone** |
 | `FuelCellPart` | `Oil` | **Fuel Cell** |
+| `BauxiteOre` | `BauxiteOre` | **Aluminum Ore** |
 
 **`Oil` displays as "Fuel Cell", NOT "Impure Fuel"** (operator-confirmed). This matters: earlier
 notes in this session assumed `FuelCellPart` was the gaming.tools "Impure Fuel" entry. It is not.
@@ -442,9 +443,15 @@ display (`MagnetiteOre` -> "Iron Ore"), node name changed for the item (`Erythri
 mineral chemistry alone would have produced at least one confident error (Erythrite is a cobalt
 mineral, but yields `ErythriteCrystal`, not a cobalt item).
 
+**`BauxiteOre` confirmed 2026-08-24** (live in-game gather, DB delta +4 matching the pickup
+exactly, operator-reported display text "Aluminum Ore"): item template is a direct pass-through
+(`BauxiteOre` -> `BauxiteOre`), display **Aluminum Ore** -- the session-1 real-world-mineralogy
+guess (bauxite is aluminum's ore) was right this time, but was correctly held as unconfirmed
+until gathered, per this section's own rule.
+
 Still unconfirmed by item as of this writing: `Dolomite*` (Carbon Ore, marker only),
-`BasaltOre`/`BasaltPickup`, `TitaniumOre`, `StravidiumOre`, `BauxiteOre` (strong class matches but
-never gathered), `ScrapMetalPart` vs `ScrapMetalWreckage` (no clean single-variable gather), and
+`BasaltOre`/`BasaltPickup`, `TitaniumOre`, `StravidiumOre` (strong class matches but never
+gathered), `ScrapMetalPart` vs `ScrapMetalWreckage` (no clean single-variable gather), and
 Jasmium (Hagga only, never located).
 
 ### 6e. Sandworms, sandstorms and the Coriolis seed
