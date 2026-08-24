@@ -833,6 +833,54 @@ against **3,715** for confirmed ones, the record:marker ratio is **5.5x** even i
 best-explored 270,000 uu cell, and they extend beyond the explored bounding box. The
 set contains other spawn-record-shaped objects. Separating them is undone work.
 
+### 4c. POIs are NOT discovery-limited -- every one is `long_range`, so the DB is their complete source
+
+Operator report, 2026-08-24: **all Ecolabs on the map are discovered, and they never
+entered any of them.** Checked directly against the DB, and it holds for every POI
+type on both maps:
+
+| Map | Type | Rows | `long_range=true` | named |
+|---|---|---:|---:|---:|
+| DeepDesert | Cave | 11 | **11** | 11 |
+| DeepDesert | Ecolab | 6 | **6** | 6 |
+| DeepDesert | Shipwreck | 6 | **6** | 6 |
+| DeepDesert | TaxiService | 3 | **3** | 3 |
+| HaggaBasin | Cave | 95 | **95** | 95 |
+| HaggaBasin | Ecolab | 14 | **14** | 14 |
+| HaggaBasin | Shipwreck | 13 | **13** | 13 |
+| HaggaBasin | Sietch | 8 | **8** | 8 |
+
+**100% `long_range`, 100% named, on every POI type.** The sole exception is `NoIcon`
+(DD 5, Hagga 16), which is neither.
+
+This **refines section 5's blanket warning**. "Never present `dune.markers` as an
+exhaustive atlas" remains correct for **resource nodes** (`long_range=false`, revealed
+only by going there). It is **wrong for POIs**: they are revealed at range, so the DB
+already holds them all and **the memory scanner is not needed for the POI layer at
+all**. That also confirms the census's 0% POI coverage is correct and expected, not a
+defect -- section 5c already established that structure geometry is streamed per player.
+
+The DisplayName payload splits them exactly along section 10b's authored/procedural
+line, which tells the Live Map what to cache and what to re-read each cycle:
+
+| Type | Procedural (bare name, re-rolled per Coriolis cycle) | Authored (`Shield_Wall_*`, permanent) |
+|---|---:|---|
+| Ecolab | 4 | 2 (`ECOLAB_005`, `ECOLAB_013`) |
+| Shipwreck | 3 | 3 (`ShipWreck_01/02/03`) |
+| Cave | 7 | 4 (`Cave_06` x2, `Cave_09` x2) |
+| TaxiService | 3 | 0 |
+
+The 4 procedural DD Ecolabs are slot-placed, not free-placed: three sit at exactly
+`z = 2790`, and two share `y = 193344` exactly. The `area_id 30` one at
+`(-201473, -214617)` is the F-4 station from section 5b. Every marker carries
+`area_radius = 30000`.
+
+**Open question, and it is the one that matters for the post-storm goal:** "discovered
+without entering" proves long-range reveal works without visiting the POI. It does
+**not** establish that markers populate with no player on the map at all, nor how
+quickly they repopulate after a Coriolis storm wipes them. Until that is observed
+across an actual storm, do not assume the POI layer is available at t=0 post-storm.
+
 ### 5. Two real defects found and fixed en route
 
 - **#18** -- `FindNearbyXY` accepted NaN pairs: both guards were written as "skip if
