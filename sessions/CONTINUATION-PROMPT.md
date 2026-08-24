@@ -3,184 +3,186 @@
 Lives at `~/projects/repos/dune-resource-scanner/sessions/CONTINUATION-PROMPT.md`.
 Paste it into a fresh session, and **overwrite it in place before that session ends**.
 
+Last rewritten: **2026-08-24**.
+
 ---
 
 Continue the Dune Awakening Live Map work. **Read
-`~/projects/repos/dune-resource-scanner/CONTINUATION.md` first — the Goal, then sections 10 and
-11.** Earlier sections predate the real product requirement and reach conclusions it overturns;
-the document flags those inline.
+`~/projects/repos/dune-resource-scanner/CONTINUATION.md` first — the Goal, then §10,
+§11, and the §4a–§4d block from session 4.** Earlier sections predate the real product
+requirement and reach conclusions it overturns; the document flags those inline.
 
 ## The goal
 
-Build a **dynamic live map of both Deep Desert and Hagga Basin** showing **all resources, POIs,
-player buildings, and storm/worm activity** — and critically, one that works **immediately after a
-Coriolis storm regenerates Deep Desert**, so players know where to go without re-exploring.
+Build a **dynamic live map of both Deep Desert and Hagga Basin** showing **all resources,
+POIs, player buildings, and storm/worm activity** — and critically, one that works
+**immediately after a Coriolis storm regenerates Deep Desert**, so players know where to
+go without re-exploring.
 
-That last clause drives everything. `dune.markers` is discovery-driven and empty right after a
-wipe, so a database-only map can only report what someone already found. Reading the live server's
-process memory is the only way to see undiscovered nodes.
+`dune.markers` is discovery-driven for resources and empty right after a wipe, so a
+database-only map can only report what someone already found. Reading the live server's
+process memory is the only way to see undiscovered ore nodes.
 
-## Two tracks. Track A blocks Track C.
+## Where this actually stands (read before planning anything)
 
-### Track A — fix the scanner (do this first)
+| Capability | State |
+|---|---|
+| **Node positions, including undiscovered ones** | **Working.** ~60–64% recall, whole map, 17 s, 136 MB RSS |
+| **Node types (titanium vs scrap vs bush)** | **Unsolved. This is the blocker.** Four attribution routes ruled out |
+| Spice by tier, Flour Sand | Exact from `resourcefield_state` + `field_id` decode — **but only the inner ~87% of the map** (21-bit packing limit) |
+| Named POIs | **Complete** from `dune.markers` where `long_range=true`; scanner not needed |
+| Bases, vehicles, storage, players | Already shipped in Core |
+| Zero-player operation | **Untested.** See experiment 1 below |
 
-**Session 4 (2026-08-24) found #16's root cause. Read `CONTINUATION.md` Session 4 and
-`findings/2026-08-24-issue-16/README.md` before touching this.** The summary:
+**The honest summary**: post-storm you could ship spice, flour sand, bases, POIs and an
+*unlabelled* "a resource node is here" layer. You could not say which node is Titanium.
 
-- Pass 1 finds **211/211 known markers (100%)**. Pass 2 resolves **6/211 (2.8%)**.
-  Positions were never the problem — the missing output is a resource *type*.
-- The hypothesis this issue was opened with (back-references outside the scanned
-  regions) is **disproved**. Offset-agnostically, **nothing points into the 2 KB before
-  these nodes' transforms**, so widening the region set cannot help.
+## Two experiments left over from 2026-08-24, both cheap, both need the operator
+
+Do these first — they are short and they change what is worth building.
+
+1. **Zero-player scan — settles the last post-storm dependency.**
+   Every scan so far ran while a session was registered `Online` on `DeepDesert_1`, even
+   when the operator was not actually playing. `dune-autoscaler` despawns a 0-player
+   instance after 300 s, and no instance means nothing to scan. Ask the operator to log
+   fully out of DD, confirm `dune admin players --online` shows nobody on that map, wait
+   past 300 s, then re-run `census.go`. If it still returns marker-validated data the
+   post-storm path needs no player; if the process is gone, the Live Map must trigger its
+   scan while someone is on the map.
+
+2. **Walk-to validation — `dune admin teleport` does NOT work.**
+   Re-tested three ways on 2026-08-24 (two long-range, one 3,000 uu hop inside loaded
+   terrain): all `publish=ok`, exit 0, **zero movement**. §6c is re-corrected accordingly.
+   **No validation plan may depend on teleporting the operator.** Targets, controls and
+   the exact before-state are in `findings/2026-08-24-issue-16/README.md`: four
+   predictions ~100 m from the operator's DD base in terrain with no marker within ±6 km,
+   plus three already-marked controls at 3–15 m. A positive result would also yield the
+   first *labelled* records in unexplored terrain, which is exactly what type attribution
+   has never had.
+
+## Track A — the scanner
+
+### #16 is a redesign, not a bug fix
+
+Root cause, established 2026-08-24 and evidenced in `findings/2026-08-24-issue-16/`:
+
+- Pass 1 locates **211/211** known markers in a test box (100%). Pass 2 resolves **6/211**
+  (2.8%). The loss is entirely in actor resolution.
+- The hypothesis this issue was opened with is **disproved**. Offset-agnostically,
+  **nothing in memory points into the 2 KB preceding these nodes' transforms**, so
+  widening the region set cannot help.
 - Ore/scrap/pickup nodes are **384-byte spawn records in an array**, not UObject actors.
-  Spice and flour sand are unaffected — seed mode reaches them through a real actor.
-- Filtering on the spawn-record signature gives **152/211 (72%)** at 1–2 copies per
-  marker — a **25× improvement** with no actor chain at all.
+  Spice and flour sand are unaffected — seed mode reaches them via `BaseValue` inside a
+  genuine actor, which is why that path always worked.
+- Filtering on the spawn-record signature gives **64.3% on DeepDesert, 58.5% on
+  HaggaBasin** — map-independent and process-independent, surviving a restart with fresh
+  ASLR.
 
-**Map-wide follow-up:** the signature approach now scans the whole world in **17 s at
-136 MB** and hits **64.8% marker coverage (5,144 / 7,934)** vs the shipped 2.8% — ore and
-rock 66–89%, small pickups 14–30%, POIs 0% (expected; they are streamed). Four
-type-attribution routes are ruled out — the actor chain, all 48 record offsets, the object
-`+0` points at, and memory-address clustering. **The 80,803 unmatched records are not all
-undiscovered nodes** (median Z 18,058 vs 3,715; 5.5x the markers even in the best-explored
-cell) — do not present the census as a complete map.
+### Type attribution — four routes ruled out, do not re-derive
 
-**Validated 2026-08-24:** the census finds **undiscovered** nodes — 60.2% of 1,667 markers
-discovered *after* the scan was captured, vs 64.8% of already-known ones. It also transfers
-across maps and process restarts (HaggaBasin 58.5% vs DeepDesert 64.3%, same per-type
-structure). **Discovery is not required.** The one untested dependency is **zero players**:
-every scan ran while a session was registered Online on `DeepDesert_1`, and the autoscaler
-despawns 0-player instances after 300s. Test that first — log fully out of DD, confirm
-nobody is on the map, wait past 300s, re-run the census. Ten minutes, closes the last open
-question on the post-storm path.
+| Route | Result |
+|---|---|
+| Actor chain (`actor → RootComponent`) | No back-references exist at all |
+| All 48 record offsets, 0..376 | No per-type value. `+0` is unique per record (zero collisions) — a per-instance handle |
+| The object `+0` points at, first 256 bytes | Not a UObject — holds float64 coordinate pairs (a bounding box) |
+| Memory-address clustering | 30.9% same-type adjacency vs a 12.9% chance baseline — real, far too weak |
 
-1. **[#16](https://github.com/Project-Arrakis/dune-resource-scanner/issues/16) — still the
-   blocker, but it is a redesign, not a bug fix.** Next steps, cheapest first:
-   (a) relax the spawn-record signature (the `+8 == 0x0000000100000001` constant is
-   probably over-strict) and re-measure against the same 211-marker ground truth;
-   (b) follow the record's `+0` heap pointer and inspect what it points at, rather than
-   scoring it blind; (c) test whether one of the EXE pointers at record `+280/+320/+336`
-   identifies the type — those are the only module-relative values in the record, so a hit
-   there would also be **stable across restarts** and would solve the ASLR/anchor problem.
-   The harness for all three is in `findings/2026-08-24-issue-16/tools/` (`//go:build ignore`;
-   run with `go run`). Ground truth box: `-near=-4368,-198837 -tolerance 15000`.
-2. ~~#14 `ValidTransform`~~ — **done, PR #17** (denormals, `Inf`, Z bound). Note the Z bound
-   is `WorldBound`, so it does **not** reject the `Z = 228598` hit; that was deliberate.
-3. **Emit `[]` not `null`** on an empty scan (Go nil-slice marshalling; breaks naive parsers).
-   **Still open.**
-4. **Class-anchor mode** — reconsider. Anchors were meant to re-derive `ClassPrivate` after a
-   restart, but ore nodes have no reachable `ClassPrivate`. If 1(c) works, anchors may be
-   unnecessary for them.
-5. **Consider fast-capture** — dump candidate regions to disk, analyse offline. A 2–5 minute
-   inline scan cannot catch a sandworm and probably cannot catch a storm.
+Still unexplored: the handle-like `0x498000xx` value at the followed object's qword[1];
+whether render/mesh data carries identity; and the **small-`*Pickup` gap** (14–30% recall
+against 66–89% for ore, with RhyolitePickup and AzuritePickup the odd ones out at 67%) —
+a second record shape is the likely cause and closing it pushes coverage past 65%.
 
-**Also fixed in session 4: [#18](https://github.com/Project-Arrakis/dune-resource-scanner/issues/18)**
-— `FindNearbyXY` accepted NaN pairs (both guards were negations; every NaN comparison is
-false), producing ~17.4M of 17.4M hits in a scan. Fixed in PR #19: 623k hits, coverage
-unchanged at 211/211, peak RSS 12.6 GB → 165 MB.
+### Smaller items
 
-**PRs #17 and #19 are green on all four required checks but NOT merged** — the previous
-session's tooling declined the merge action. Merge them before building on `main`.
+- **Emit `[]` not `null`** on an empty scan (Go nil-slice marshalling; breaks naive
+  parsers). Still open.
+- **Class-anchor mode** — reconsider. Anchors were meant to re-derive `ClassPrivate` after
+  a restart, but ore nodes have no reachable `ClassPrivate`.
+- **Fast-capture** — dump regions to disk, analyse offline. A slow inline scan cannot
+  catch a sandworm or a storm.
+- ~~#14 `ValidTransform`~~ and ~~#18 NaN pairs~~ — **done**, PRs #17 and #19.
 
-### Track B — data gathering
+## Track B — data sources
 
 | Layer | Source | State |
 |---|---|---|
-| Spice (3 tiers), Flour Sand | `resourcefield_state` + `field_id` decode | **Ready** — exact, live, both maps |
-| Ore / stone / flora nodes | scanner + class→name | **Blocked on #16** |
-| Named POIs | `dune.markers` where `long_range=true` | **Ready and complete** — every POI row on both maps is `long_range` + named, revealed at range not by visiting. Scanner not needed here. Post-storm repopulation timing unobserved |
+| Spice (3 tiers), Flour Sand | `resourcefield_state` + `field_id` decode | **Ready for the inner ~87% of the map** — the 21-bit packing cannot represent \|x\| or \|y\| beyond 1,048,575, where 12.9% of real DD markers sit |
+| Ore / stone / flora nodes | scanner + type attribution | **Positions work; types blocked** |
+| Named POIs | `dune.markers` where `long_range=true` | **Ready and complete** — revealed at range, not by visiting; scanner not needed |
 | Bases, storage, vehicles, players | existing `liveMap*` in Core | **Already shipped** |
 | Dropped loot | `dune.actors` `BP_LootContainer` | **Ready**, unused |
 | Hagga region labels | marker `DisplayName` | **Ready** — normalise spelling |
-| DD grid labels | 9×9 @ 270,000 uu, origin (−52656, −52066) | **Ready** — verified on 5 cells |
+| DD grid labels | 9×9 @ 270,000 uu, origin (−52656, −52066) | **Ready** |
 | Map regeneration signal | `debug_get_coriolis_seeds()` | **Ready** |
-| Sandstorm per-structure | `game_events` type 13 | **Partial** — only where a player owns a structure |
-| **Active storm position** | — | **Open**, memory only, never attempted |
-| **Sandworm activity** | — | **Open**, absent from DB, checked live twice |
-| Hidden treasure | — | **Open**, not in DB, three empty scans |
+| Sandstorm per-structure | `game_events` type 13 | **Partial** |
+| Active storm position, sandworms, hidden treasure | — | **Open**, memory-only |
 | Primrose water | — | **Unreachable** — not an item, not persisted |
 
-Remaining identification work:
+Remaining identification work: **Jasmium** (Hagga only, last of the 15); `Dolomite*`
+(Carbon Ore) item name; **Impure Fuel** (unidentified — `FuelCellPart` yields `Oil`, which
+displays as "Fuel Cell").
 
-- **Hagga pass** — **Jasmium** (its only home, last of the 15 raw resources); whether Titanium,
-  Stravidium, Bauxite, Dolomite and Magnetite exist there at all (zero markers now, but Basalt
-  appeared the instant the operator walked past one, so absence is probably discovery);
-  the two missing regions (`Graben` and `RedD` expected); and the **permanent anchor set**, which
-  never expires because Hagga is authored terrain.
-- **`Dolomite*` (Carbon Ore)** — the only DD item name still genuinely unknown.
-- **Impure Fuel** — unidentified, no known node type. `FuelCellPart` yields `Oil`, which displays
-  as "Fuel Cell", so Impure Fuel is something else.
-- **Storm and worm** — both memory-only and fast-moving. Do not attempt with the current inline
-  scanner; revisit after Track A item 5.
+## Track C — build the Live Map
 
-### Track C — build the Live Map
-
-Only after Track A. No Core code exists yet. Constraints from the earlier eight-hats audit stand:
+Only after Track A. No Core code exists yet. Constraints from the eight-hats audit stand:
 no continuous privileged sidecar, scoped read-only DB role, console API reads a read-only
-bind-mounted scanner output file rather than talking to the scanner. Core's Live Map already
-exists (`console/web/src/features/liveMap/LiveMapPanel.tsx`, `console/api/src/duneDb.js`
-`liveMap*`, routes at `server.js:1148-1157`) and uses `LIVE_MAP_CONFIGS` min/max bounds
-normalisation on 4096×4096 images — **reuse it; do not introduce a second calibration scheme.**
-Known bug to fix while there: `liveMapBases()` filters `coalesce(a.partition_id,0) > 0`, so a base
-whose instance despawned silently vanishes from the map.
-
-## Two experiments left over from 2026-08-24, both cheap
-
-1. **Zero-player scan (settles the last post-storm dependency).** Every scan so far ran
-   while a session was registered Online on `DeepDesert_1`. Log fully out of DD, confirm
-   `dune admin players --online` shows nobody on that map, wait past the autoscaler's
-   300 s grace period, then re-run `census.go`. If it still returns marker-validated data,
-   the post-storm path needs no player at all; if the process is gone, the Live Map must
-   trigger its scan while someone is on the map.
-2. **Walk-to validation (teleport does NOT work — see §6c).** Targets, controls and the
-   exact before-state are in `findings/2026-08-24-issue-16/README.md`. Four predictions
-   ~100 m from the operator's DD base, in terrain with no marker within ±6 km. A positive
-   result would also yield the first *labelled* records in unexplored terrain, which is
-   what type attribution has always lacked.
+bind-mounted scanner output file rather than talking to the scanner. Core's Live Map
+already exists (`console/web/src/features/liveMap/LiveMapPanel.tsx`,
+`console/api/src/duneDb.js` `liveMap*`) and uses `LIVE_MAP_CONFIGS` min/max normalisation
+on 4096×4096 images — **reuse it; do not introduce a second calibration scheme.** Known
+bug to fix while there: `liveMapBases()` filters `coalesce(a.partition_id,0) > 0`, so a
+base whose instance despawned silently vanishes.
 
 ## Working practices that matter
 
-- **`dune admin teleport` does not work** (re-tested 2026-08-24 at long range, a second
-  long-range target, and a 3,000 uu hop inside loaded terrain -- all `publish=ok`, exit 0,
-  zero movement). §6c's 2026-08-22 "it works with a delay" correction is wrong or the
-  behaviour regressed. **Do not plan validation that depends on teleporting the operator**
-  -- pick targets near where they already are.
-- **Operator must be stationary before any scan.** The scanner reads `-near` at launch and runs
-  2–5 minutes. Two scans were wasted when the operator travelled mid-scan and the empty results
-  looked like real negative findings.
-- **Match marker-centric, not actor-centric** — for each marker, ask which class sits on it.
-  Nearest-marker-wins produced two confidently-wrong labels.
-- **Exclude the operator's own character and controller** — they sit at the player's position and
-  match whatever marker is underfoot.
-- **Inventory diffing beats scanning for names.** Snapshot `dune.items`, gather one node, diff.
-  Order by `acquisition_time`, not `actor_id` — dropped items move to a `BP_LootContainer`.
-- **Never infer item names.** Four predictions in the last session, four wrong. Node name, item name and
-  display name are three independent things.
-- **Verify pasted reference material.** Third-party docs supplied at the start were right about
-  some things (`field_kind_id`, `field_id` packing) and badly wrong about others (marker counts
-  off by 20×, event-type meanings, Leaflet calibration constants that match nothing in this
-  codebase).
-- **Use a remote-side `timeout`** on every scan — a local `timeout ssh` leaves the remote process
-  running and CPU-pegged. **Bound the working set inside the tool too**: a wall-clock timeout does
-  not stop a diagnostic from allocating its way toward an OOM on a host that also runs the live
-  game server. Session 4 had to kill one manually and re-verify the game PIDs afterwards.
-- **A scoring metric can look like a result.** Session 4's first type-discriminator search
-  reported a confident `pure = 15` that was pure artifact (`0x0` satisfies "all markers of this
-  type share a value"). Check what a metric actually rewards before believing its ranking.
-- **Never write session summaries or continuation prompts to `/tmp`.** They go in the repository,
-  under `sessions/` — see [`README.md`](README.md) for the two file types and their lifecycles.
-  `/tmp` is `tmpfs` on these hosts, so anything a future session needs to find would not survive a
-  reboot. Genuine throwaway scratch (a scan's raw JSON, an intermediate diff) is still fine there;
-  a handoff note is not.
+- **`dune admin teleport` does not work.** Pick targets near where the operator already is.
+- **Operator must be stationary before any *proximity* scan** — it reads `-near` at launch
+  and runs minutes. The map-wide census has no `-near`, so movement is irrelevant there.
+- **Bound a diagnostic's working set inside the tool**, not just with a wall-clock timeout.
+  Two runs this session had to be killed manually — one reached 10.7 GB RSS on a host with
+  24 GB free that also runs the live game server. `census.go` streams to disk and takes
+  `-maxrecords` for exactly this reason.
+- **Check what a metric rewards before believing its ranking.** A type-discriminator search
+  reported a confident `pure = 15` that was pure artifact (`0x0` satisfies "all markers of
+  this type share a value").
+- **Verify a filter against real data before shipping it.** A per-axis origin filter looked
+  obviously right and would have discarded up to 98 real nodes, because DD crosses the
+  origin.
+- **Match marker-centric, not actor-centric.** Nearest-marker-wins produced two
+  confidently-wrong labels.
+- **Never infer item names.** Four predictions, four wrong. Node name, item name and
+  display name are three independent things — gather and diff `dune.items`, ordering by
+  `acquisition_time`.
+- **Verify third-party claims.** A `field_id` report this session was right about the
+  21-bit limit and wrong about it causing the observed misses.
+- **Use a remote-side `timeout`** — a local `timeout ssh` leaves the remote process running.
+- **Never write anything a future session needs to `/tmp`.** It is `tmpfs`. Session notes go
+  in `sessions/`, evidence in `findings/<date>-<topic>/`, committed. Binaries deployed to
+  `dune-dev:/tmp` are fine — they are redeployable and hold no findings.
 
 ## Environment
 
-`ssh dune-dev`, passwordless sudo. **DeepDesert = `DeepDesert_1` process, Hagga = `Survival_1`** —
-find PIDs with `ps aux | grep DuneSandboxServer`. Deploy by cross-compiling locally
-(`GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build`) and `scp` to `/tmp/dune-resource-scanner`.
-`dune database sql "<query>"` is the read-only DB interface; for complex SQL write a file and
-`scp` it rather than fighting shell quoting. `dune-dev` is sanctioned for this work; `dune-prod`
+`ssh dune-dev`, passwordless sudo. **DeepDesert = `DeepDesert_1`, Hagga = `Survival_1`.**
+Find PIDs with `/tmp/gamepid.sh <map>` (matches on RSS to skip the `/bin/sh` wrapper, which
+shares a truncated `comm` with the binary — plain `pgrep -f` also matches your own ssh
+shell). Cross-compile locally (`GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build`) and `scp`
+over. `dune database sql "<query>"` is the read-only DB interface; for complex SQL write a
+file locally and `scp` it rather than fighting shell quoting — note single quotes inside a
+single-quoted `ssh '...'` will break. `dune-dev` is sanctioned for this work; `dune-prod`
 is not.
 
-Open PR: [#15](https://github.com/Project-Arrakis/dune-resource-scanner/pull/15) (docs, CI green).
-Open issues: **#16 (recall — the blocker)**, #14 (`ValidTransform`), #1 (v1 tracking).
+Persistent scan data lives on `dune-dev:~/scan-findings/` (not `/tmp`).
+
+Test character: FLS `BeretGenesis#24872`, name `DarkDante`.
+
+## Repo state as of 2026-08-24
+
+`main` green. **Open issues: #16 (the blocker), #1 (v1 tracking).** No open PRs.
+Merged this session: #17, #19, #20, #21, #22, #23, #24. #14 and #18 closed by their fixes.
+
+Evidence directories, all with re-runnable tooling:
+
+- `findings/2026-08-24-issue-16/` — root cause, the funnel, the census, `census.go` and
+  `analyse_census.py`
+- `findings/2026-08-24-validation/` — the retrospective and cross-map validation
+- `findings/2026-08-24-field-id-21bit/` — the 21-bit verification and `analyse_field_id.py`
