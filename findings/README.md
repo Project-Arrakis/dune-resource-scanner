@@ -14,9 +14,9 @@ months, which is the failure mode this file exists to prevent.
   audit on 2026-08-24 found six claims stated more strongly than their evidence supported.
 - **Every claim links to the evidence that supports it.** If a row has no link, it does
   not belong here yet.
-- A **shareable** version of this index is published as a web page — see
-  [Sharing externally](#sharing-externally). The page carries the substance rather than
-  links, so it reads standalone.
+- This file **is** the shareable artifact — see [Sharing externally](#sharing-externally).
+  No separate generated page; GitHub renders it directly, and it pastes cleanly into
+  Discord.
 
 ---
 
@@ -113,8 +113,6 @@ against another map's actors).
 | ⚠️ | **Every per-type count is *not checkable*, not wrong** — Hagga accumulates discoveries forever, DD is re-rolled per Coriolis seed. `long_range` content, which *is* server-independent, agrees within 1.36× with three exact matches |
 | ✅ | All 26 named POI/vendor/trainer/House types exist; the SQL works; `field_kind_id` semantics correct |
 
----
-
 ## Accuracy audit — 2026-08-24
 
 An operator challenge ("I thought we had the data to prove node types") triggered a full
@@ -151,56 +149,24 @@ When an investigation produces something worth keeping:
    spice fields. Use 🔹 when the claim is an inference and say what it was inferred from.
    If a claim cannot be traced to a number in `findings/`, it does not belong here.
 5. Update the "Current state at a glance" table if the finding moves a capability.
-6. Regenerate the page with `tools/build-findings-page.py`; CI fails if you forget.
 
 Large raw captures should be reduced or gzipped before committing; keep the full copy on
 the scan host under a persistent path, never `/tmp`.
 
 ## Sharing externally
 
-**This repository is public.** It was private when these findings were first written, and
-that changed on 2026-08-24 — so the links above do resolve for anyone, and the rule below
-matters more than it did, not less.
+**This file is the shareable artifact.** No separate generated page — it was tried
+(GitHub Pages, built from this file) and dropped: GitHub renders this file directly and
+well, and Markdown pastes cleanly into Discord as-is, which a generated HTML page never
+could. One artifact, no drift risk between a source and a copy, no browser-rendering
+uncertainty to chase.
 
-The published page is a **self-contained** view: it carries the substance rather than
-links, so it reads standalone and does not require a reader to navigate the repo.
-
-**Live page:** <https://project-arrakis.github.io/dune-resource-scanner/>
-
-**This file is the only source.** `docs/index.html` is **generated** from it by
-[`tools/build-findings-page.py`](../tools/build-findings-page.py) and served by GitHub
-Pages from `main` at `/docs`. Never edit the HTML by hand — the next regeneration
-overwrites it.
-
-```sh
-python3 tools/build-findings-page.py           # regenerate after editing this file
-python3 tools/build-findings-page.py --check   # CI runs this; fails if stale
-```
-
-CI regenerates and compares, so the published page **cannot** drift from this one. That
-matters here specifically: this project has been bitten repeatedly by duplicate documents
-falling out of sync — `CONTINUATION.md` opens with a duplicate README that drifted twice in
-one day, and a single stale premise had to be corrected in three places in one session.
-A second hand-maintained copy of this index would be the same trap, so it is generated
-rather than written.
-
-The generator keeps the status markers meaningful: ✅/❌/⚠️/❓ become styled chips, tables
-get their own scroll container, and repo-relative links are rewritten to absolute GitHub
-URLs so they resolve on the standalone page.
-
-Note that **GitHub will not render HTML from the repo or `raw.githubusercontent.com`** —
-raw serves `content-type: text/plain` with `nosniff`, deliberately, so nobody can host
-pages off raw URLs. Pages is the supported path, and it is free because this repo is
-public.
-
-`docs/.nojekyll` is present so Pages serves the directory verbatim instead of running it
-through Jekyll.
-
-A copy is also published as a Claude Artifact at
-<https://claude.ai/code/artifact/a71d45b1-b8a4-4aba-b33f-359a003653d2>. That was the
-original home, chosen when this repo was still private and Pages was therefore unavailable.
-**GitHub Pages is now canonical**; if you update one, update the other or retire the
-artifact.
+- **View in browser:** the GitHub URL for this file, rendered natively —
+  <https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/README.md>
+- **Paste into Discord:** copy the section you need directly. Headers, bold, links, and
+  code blocks all carry over; Discord does not render Markdown tables, so a pasted table
+  shows as raw pipe-delimited text — prefer quoting the surrounding prose plus the specific
+  numbers if a table's content needs to go into a message.
 
 ### What must never be committed
 
