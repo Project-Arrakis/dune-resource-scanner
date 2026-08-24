@@ -248,6 +248,40 @@ conditional/watchpoint-based tracing sophisticated enough to catch a genuinely r
 differently-triggered event -- squarely the "multi-hour-to-multi-day, proper tooling"
 territory the Session 1 conclusion already predicted, now confirmed rather than assumed.
 
+## Session 4 (2026-08-24, same day): full-record diff, live -- broadens the negative
+
+Session 3 refuted the specific "`+336` fires on proximity" and "proximity creates a
+`dune.actors` row" theories. While the operator was still positioned next to a confirmed
+`BauxiteOre`/Aluminum node (and a nearby stone-part node), ran one more, broader test: a
+**full 48-field byte-level diff** of every record's entire captured field set, not just the
+three EXE pointers or the actors table.
+
+Method: took every `BauxiteOre`, `BauxitePickup`, `DolomiteRock`, and `DolomitePickup`
+marker (372 candidates), matched each to its nearest census record in both the pre-storm
+baseline (`../2026-08-24-storm-watch/pre-storm-baseline/`, captured with nobody online) and
+a fresh census run live, right now, with the operator standing next to two of these nodes.
+Diffed every field (`fields["0"]` through `fields["376"]`, the full captured offset range)
+between the two snapshots for every matched pair.
+
+**Zero fields differ, for any matched record.** Not a subset -- the complete captured
+structure is byte-for-byte identical whether a player is present or not, for every node
+type checked. Combined with Session 3's negatives (no `+336` hit, no `dune.actors` row),
+this is now a comprehensive, three-independent-method result: **these 384-byte spawn
+records are static, server-side-immutable data.** Whatever makes a node visually
+interactable/harvestable to a nearby player does not touch this data structure through any
+mechanism checked so far -- it is very likely handled entirely client-side (distance-based
+rendering/interaction logic against data the client already has), with the server's role
+limited to holding static position/geometry for physics and replication.
+
+**Practical consequence for type attribution:** this closes off proximity-triggered
+promotion as a path to type identity entirely, not just the two specific mechanisms Session
+3 tested. There is no evidence remaining, from any angle tried across all four sessions in
+this document, that walking up to a node changes anything about how it's represented in
+server memory. The type-attribution problem is now, as far as this investigation can
+establish, **not solvable through memory, static code, or live debugging** -- only through
+the DB after real discovery, which is not a proximity-triggered memory event, or a future
+approach not yet conceived.
+
 ## Files
 
 - `tools/deref.go` -- the dereference/disassembly-target tool (`//go:build ignore`),
@@ -256,6 +290,8 @@ territory the Session 1 conclusion already predicted, now confirmed rather than 
   session-2-specific, not general-purpose (the base pointer is hardcoded from one live run).
 - `tools/trace-336.gdb` -- the bounded live-breakpoint script used in Session 3, with the
   safety notes on how it must be run (never a hard kill) inline as comments.
+- `tools/diff_records.py` -- Session 4's full-field diff between the pre-storm baseline and
+  a fresh live census; paths are hardcoded to this session's specific capture locations.
 
 Raw disassembly output and the region-breakdown numbers are recorded inline above rather
 than as separate captured files -- both are small and fully reproducible from the commands
