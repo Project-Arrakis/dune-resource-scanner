@@ -37,6 +37,14 @@ process memory is the only way to see undiscovered nodes.
 - Filtering on the spawn-record signature gives **152/211 (72%)** at 1–2 copies per
   marker — a **25× improvement** with no actor chain at all.
 
+**Map-wide follow-up:** the signature approach now scans the whole world in **17 s at
+136 MB** and hits **64.8% marker coverage (5,144 / 7,934)** vs the shipped 2.8% — ore and
+rock 66–89%, small pickups 14–30%, POIs 0% (expected; they are streamed). Four
+type-attribution routes are ruled out — the actor chain, all 48 record offsets, the object
+`+0` points at, and memory-address clustering. **The 80,803 unmatched records are not all
+undiscovered nodes** (median Z 18,058 vs 3,715; 5.5x the markers even in the best-explored
+cell) — do not present the census as a complete map.
+
 1. **[#16](https://github.com/Project-Arrakis/dune-resource-scanner/issues/16) — still the
    blocker, but it is a redesign, not a bug fix.** Next steps, cheapest first:
    (a) relax the spawn-record signature (the `+8 == 0x0000000100000001` constant is

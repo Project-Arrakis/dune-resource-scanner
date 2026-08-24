@@ -142,6 +142,95 @@ Two honest caveats:
   promotes all-zero offsets (`distinct = 1`). Re-rank by high `distinct` and low
   `collisions` before reading it again.
 
+## Map-wide census — the signature validated on 37x more ground truth
+
+The 72% figure above came from one box and 211 markers. The operator had since
+explored a great deal more, so `dune.markers` for DeepDesert had grown from 440
+(session 3) to **7,934** rows across **31 types**. `tools/census.go` scans the whole
+world in one pass instead of a box, filters on the spawn-record signature inline,
+and streams to disk.
+
+```
+raw plausible-XYZ triples: 59,254,091
+strict signature records:      85,788
+elapsed=17.3s  maxrss=136 MB
+```
+
+For comparison, the shipped scanner takes 2-5 minutes on a *single box* and peaked
+at 12.6 GB before #18.
+
+### Coverage: 5,144 / 7,934 markers (64.8%)
+
+Against the shipped scanner's **2.8%** — a **23x improvement**, now measured on the
+whole map rather than one box. Full output in `census-analysis-mapwide.txt`.
+
+| Type | Matched | Total | % |
+|---|---:|---:|---:|
+| DolomiteRock | 73 | 82 | **89.0%** |
+| AzuriteOre | 52 | 63 | 82.5% |
+| RhyoliteOre | 40 | 50 | 80.0% |
+| TitaniumOre | 164 | 211 | 77.7% |
+| ScrapMetalWreckage | 980 | 1338 | 73.2% |
+| MagnetiteOre | 30 | 41 | 73.2% |
+| StravidiumOre | 72 | 99 | 72.7% |
+| BasaltOre | 102 | 146 | 69.9% |
+| BauxiteOre | 60 | 86 | 69.8% |
+| FuelCellPart | 688 | 984 | 69.9% |
+| RhyolitePickup | 535 | 795 | 67.3% |
+| ScrapMetalPart | 1431 | 2151 | 66.5% |
+| BrittleBush | 299 | 560 | 53.4% |
+| BauxitePickup | 25 | 83 | 30.1% |
+| BasaltPickup | 37 | 144 | 25.7% |
+| DolomitePickup | 21 | 83 | 25.3% |
+| StravidiumPickup | 17 | 77 | 22.1% |
+| TitaniumPickup | 34 | 162 | 21.0% |
+| MagnetitePickup | 6 | 41 | 14.6% |
+| Cave / Shipwreck / Ecolab / TaxiService / Hazard\* / HomeBase | 0 | 32 | **0%** |
+
+Three clean patterns:
+
+- **`*Ore` and rock nodes: 66-89%.** The signature suits them well.
+- **Small `*Pickup` nodes: 14-30%** — with `RhyolitePickup` and `AzuritePickup` the
+  odd ones out at 67%. Small pickups very likely use a different record shape;
+  this is the most promising lead for pushing past 65%.
+- **POIs: 0%**, exactly as §5c predicts — structures are streamed per player and
+  are simply not resident. Not a defect.
+
+### Type attribution: four routes tested, all ruled out
+
+Using 2,931 records with an **unambiguous** single-type label (matched markers agree
+*and* no marker of another type within 300 uu):
+
+| Route | Result |
+|---|---|
+| Actor chain (`actor -> RootComponent`) | No back-references exist at all (see above) |
+| All 48 record offsets, 0..376 | No value is shared by every marker of a type and no others. `+0` is unique per record (2,931 distinct, **zero** collisions) — a per-instance handle |
+| The object `+0` points at, first 256 bytes | Not a UObject. Holds float64 coordinate pairs — a bounding box — so no class pointer to read |
+| Memory-address clustering | Address-adjacent labelled records share a type **30.9%** of the time against a **12.9%** chance baseline. A real signal, far too weak to classify; every type spans the same ~3.7 GB |
+
+That is a genuine negative result, recorded so it is not re-derived: **the resource
+type does not appear to live in the record, in what it points at, or in its
+placement.**
+
+### Honest caveat: the 80,803 unmatched records are NOT all undiscovered nodes
+
+It is tempting to read 85,788 records against 7,934 discovered markers as "the map
+has 10x more nodes than anyone has found". The data does not support that:
+
+- **Z profile differs sharply** — matched records have a median Z of **3,715**;
+  unmatched, **18,058**. Real nodes sit on terrain.
+- **Density is too high even where exploration is good** — in the best-explored
+  270,000 uu cell the ratio is **5.5x** (808 markers, 4,425 records), and 1.3-4.5x
+  in the next five.
+- Unmatched records also extend beyond the explored bounding box in X and Y.
+
+So the record set contains other spawn-record-shaped objects besides resource nodes.
+**Do not present this census as a complete node map.** Separating the two is work
+that has not been done.
+
+On the positive side, the records are not duplicates: **84,744 distinct positions out
+of 85,788**, against the shipped scanner's 96 results collapsing to 42.
+
 ## Where the next session should start
 
 Positions are already at 100% recall. The open question is **type attribution

@@ -792,6 +792,47 @@ pointer to whatever it points at. The three EXE pointers at `+280/+320/+336` are
 only module-relative values in the record, so if one identifies the type it would
 also be **stable across restarts**, solving the ASLR/anchor problem in section 10a.
 
+### 4b. Map-wide census: 64.8% coverage, validated against 7,934 markers
+
+The 72% above came from one box. `dune.markers` for DeepDesert has since grown from
+440 (session 3) to **7,934** rows across **31 types** as the operator explored, so the
+signature was re-tested map-wide rather than per-box.
+
+Scanning the whole world in one pass, filtering on the signature inline and streaming
+to disk: **59,254,091 raw triples -> 85,788 records, in 17.3s at 136 MB RSS.** The
+shipped scanner takes 2-5 minutes on a *single box*.
+
+**Coverage: 5,144 / 7,934 markers (64.8%)**, against the shipped 2.8% -- a **23x
+improvement** measured across the whole map. Three clean patterns:
+
+- **`*Ore` and rock nodes: 66-89%** (DolomiteRock 89.0, AzuriteOre 82.5, RhyoliteOre
+  80.0, TitaniumOre 77.7, StravidiumOre 72.7, BasaltOre 69.9, BauxiteOre 69.8).
+- **Small `*Pickup` nodes: 14-30%** -- except RhyolitePickup and AzuritePickup at 67%.
+  A second record shape is the likely explanation and the best lead for going past 65%.
+- **POIs: 0%** (Cave, Shipwreck, Ecolab, TaxiService, Hazards, HomeBase). Exactly what
+  section 5c predicts -- structures are streamed per player. Not a defect.
+
+Records are also clean: **84,744 distinct positions out of 85,788**, versus the shipped
+scanner's 96 results collapsing to 42.
+
+**Type attribution: four routes tested, all ruled out** (on 2,931 records with an
+unambiguous single-type label):
+
+| Route | Result |
+|---|---|
+| Actor chain | No back-references exist at all |
+| All 48 record offsets 0..376 | No per-type value. `+0` is unique per record (2,931 distinct, zero collisions) -- a per-instance handle |
+| The object `+0` points at | Not a UObject -- holds float64 coordinate pairs (a bounding box), so no class to read |
+| Memory-address clustering | 30.9% same-type adjacency vs a 12.9% chance baseline -- real but far too weak; every type spans the same ~3.7 GB |
+
+**The type does not live in the record, in what it points at, or in its placement.**
+
+**Honest caveat -- do not read 85,788 records as "10x more nodes than discovered".**
+The unmatched 80,803 are not all undiscovered nodes: their median Z is **18,058**
+against **3,715** for confirmed ones, the record:marker ratio is **5.5x** even in the
+best-explored 270,000 uu cell, and they extend beyond the explored bounding box. The
+set contains other spawn-record-shaped objects. Separating them is undone work.
+
 ### 5. Two real defects found and fixed en route
 
 - **#18** -- `FindNearbyXY` accepted NaN pairs: both guards were written as "skip if
