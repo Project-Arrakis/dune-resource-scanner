@@ -22,10 +22,14 @@ empty and no database can answer the question.
 | Named points of interest from the database | 🔹 Every POI row is revealed at range; completeness is inferred |
 | Works with **zero players online** | ✅ Proven — 64.0% coverage with nobody logged in, identical to a with-player scan |
 
-The headline result is that the scanner finds nodes **before anyone has discovered them** —
-60.2% of markers that appeared *after* a scan was taken, against 64.8% for markers already
-known. That is the capability the whole project exists for, and it is measured rather than
-assumed.
+The headline result is that the scanner finds nodes **before anyone has discovered them**
+— 60.2% of markers that appeared *after* a scan was taken, against 64.8% for markers
+already known. That is the capability the whole project exists for.
+
+It has also been watched happen directly: flying into an unexplored cell toward a
+coordinate the census had already named, a real `StravidiumOre` node appeared exactly
+where predicted — captured with **zero players online**, 1.1 m off, discovered 10.9 m
+from where the operator stopped.
 
 What is missing is not a *method* for naming resources — that exists and is proven. It is a
 way to apply it at scale: naming works through actors, and only ~3% of nodes appear as

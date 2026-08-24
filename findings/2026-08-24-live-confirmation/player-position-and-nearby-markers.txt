@@ -1,0 +1,29 @@
+Live player position (dune.actors, DeepDesert):
+ id  |                                    class                                     |    x    |    y    |  z
+-----+------------------------------------------------------------------------------+---------+---------+------
+ 873 | /Game/Dune/Characters/Player/BP_DunePlayerCharacter.BP_DunePlayerCharacter_C | -680175 | -950794 | 4593
+
+Markers within a 10000x10000 box of that position (dune.markers, area_id=46, "H-3"):
+        t         |    x    |    y    |  z   | area_id | dist
+------------------+---------+---------+------+---------+------
+ StravidiumPickup | -680837 | -949978 | 4577 |      46 | 1051
+ StravidiumOre    | -680553 | -949772 | 4621 |      46 | 1090   <-- 10.9m from player, matches operator's report
+ ScrapMetalPart   | -681011 | -948458 | 8256 |      46 | 2481
+ StravidiumOre    | -680927 | -948421 | 8224 |      46 | 2489
+ TitaniumPickup   | -675632 | -950153 | 5216 |      46 | 4588
+ TitaniumOre      | -675510 | -950400 | 5247 |      46 | 4682
+ TitaniumOre      | -675942 | -948360 | 3614 |      46 | 4883
+ TitaniumPickup   | -675596 | -948130 | 3603 |      46 | 5298
+ TitaniumOre      | -677881 | -943803 | 2610 |      46 | 7358
+ ScrapMetalPart   | -677515 | -943772 | 2540 |      46 | 7509
+ BrittleBush      | -672882 | -953201 | 2276 |      46 | 7680
+ StravidiumPickup | -673605 | -945990 | 4156 |      46 | 8139
+ StravidiumOre    | -673368 | -946325 | 4187 |      46 | 8143
+
+Cross-check against 08:38 marker snapshot (findings/2026-08-24-issue-16/dd-markers-full.csv):
+  nearest match to (-680553,-949772): 158134.6 uu away, type=TitaniumOre
+  -> the StravidiumOre marker at (-680553,-949772) did not exist in that snapshot.
+
+Cross-check against 11:03 zero-player census (dd-census-ZEROPLAYER.jsonl):
+  nearest census record to (-680553,-949772): 1.1 uu away, Z=4607 (marker Z=4621, diff 14)
+  -> the census predicted this exact position before the marker existed.
