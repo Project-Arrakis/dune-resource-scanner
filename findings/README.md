@@ -112,11 +112,27 @@ The published page is a **self-contained** view: it carries the substance rather
 links, so it reads standalone and does not require a reader to navigate the repo.
 
 **Live page:** <https://project-arrakis.github.io/dune-resource-scanner/>
-**Source:** [`docs/index.html`](../docs/index.html) — a complete standalone HTML document,
-served by **GitHub Pages** from `main` at `/docs`. Edit and push; Pages redeploys on merge.
 
-It is hosted from the repo rather than anywhere else for the obvious reason: the source and
-the published page then cannot drift, and there is no separate publish step to forget.
+**This file is the only source.** `docs/index.html` is **generated** from it by
+[`tools/build-findings-page.py`](../tools/build-findings-page.py) and served by GitHub
+Pages from `main` at `/docs`. Never edit the HTML by hand — the next regeneration
+overwrites it.
+
+```sh
+python3 tools/build-findings-page.py           # regenerate after editing this file
+python3 tools/build-findings-page.py --check   # CI runs this; fails if stale
+```
+
+CI regenerates and compares, so the published page **cannot** drift from this one. That
+matters here specifically: this project has been bitten repeatedly by duplicate documents
+falling out of sync — `CONTINUATION.md` opens with a duplicate README that drifted twice in
+one day, and a single stale premise had to be corrected in three places in one session.
+A second hand-maintained copy of this index would be the same trap, so it is generated
+rather than written.
+
+The generator keeps the status markers meaningful: ✅/❌/⚠️/❓ become styled chips, tables
+get their own scroll container, and repo-relative links are rewritten to absolute GitHub
+URLs so they resolve on the standalone page.
 
 Note that **GitHub will not render HTML from the repo or `raw.githubusercontent.com`** —
 raw serves `content-type: text/plain` with `nosniff`, deliberately, so nobody can host
