@@ -75,7 +75,7 @@ Erythrite is unexplained and worth a look.
 ## The instance dependency — untested, and it is the real constraint
 
 **Every scan on 2026-08-24 ran while a player session was registered online.**
-`dune admin players --online` showed `BeretGenesis#24872 / DarkDante` as `Online` on
+`dune admin players --online` showed `<fls-id> / <character>` as `Online` on
 `DeepDesert_1` partition 8 throughout, including during the census runs, and the DD
 process had been up 4h45m continuously.
 

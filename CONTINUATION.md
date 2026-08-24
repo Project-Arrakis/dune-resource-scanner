@@ -972,7 +972,7 @@ Same per-type structure on both: ore/rock 68-89%, scrap/fuel/bush 51-73%, small
 is **map-independent and process-independent**, and survives a restart.
 
 **The one dependency that is NOT established: zero players.** Every scan this session ran
-while `dune admin players --online` reported `DarkDante` as Online on `DeepDesert_1`
+while `dune admin players --online` reported `<character>` as Online on `DeepDesert_1`
 partition 8, even when the operator was not actually playing. Since `dune-autoscaler`
 despawns a 0-player instance after 300s, no instance means nothing to scan. Section 5c
 suggests the requirement is only that an instance *exists* (resource actors were returned
@@ -1183,8 +1183,8 @@ JS challenge** (403, not a simple bot-block) — no browser automation available
 it in their own real browser, or revisit with browser automation if available later.
 
 ## Live infrastructure / access (dune-dev)
-- SSH aliases in `~/.ssh/config`: `dune-dev` (192.168.21.10, user `dune`, in `docker`+`sudo`
-  groups, **passwordless sudo**), `dune-prod` (192.168.20.10), `acp-bot` (192.168.22.10).
+- SSH aliases in `~/.ssh/config`: `dune-dev` (<dev-vm-ip>, user `dune`, in `docker`+`sudo`
+  groups, **passwordless sudo**), `dune-prod` (<prod-vm-ip>), `acp-bot` (<bot-vm-ip>).
 - Real `dune` CLI at `/usr/local/bin/dune` on `dune-dev` → execs
   `/home/dune/dune-awakening-selfhost-docker/runtime/scripts/dune`.
 - **Deep Desert is ephemeral on dune-dev** — `dune-autoscaler` despawns any 0-player map instance
@@ -1199,7 +1199,7 @@ it in their own real browser, or revisit with browser automation if available la
   investigated further, just flagged. **Don't rely on admin teleport working.**
 - `dune admin player-location <player-id>` and `dune admin players --online --show-full-ids` are
   reliable, read-only, safe — use these freely.
-- Test character: FLS `BeretGenesis#24872`, name `DarkDante`.
+- Test character: FLS `<fls-id>`, name `<character>`.
 - Confirmed base/anchor point on the Titanium-ore island: `##Totem_Small_Placeable` at
   **X=-611736.35, Y=-700183.46**, DeepDesert, partition 32 — a precise, zero-scanning-uncertainty
   reference (found via a plain, already-proven-safe SQL query on `dune.buildings` etc., the same

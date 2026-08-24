@@ -35,6 +35,15 @@ jobs:
       - name: go test
         run: go test -race -cover ./...
 
+      - name: shellcheck
+        run: shellcheck -S warning tools/*.sh
+
+      # This repository is public and its findings are written against a live
+      # game server, so an operator identifier or an internal address is easy to
+      # paste in unnoticed. Guard it in CI rather than by convention.
+      - name: no PII or internal addresses in tracked files
+        run: ./tools/check-public-safe.sh
+
   security-scan:
     uses: Project-Arrakis/.github/.github/workflows/reusable-security-scan.yml@main
     secrets:
