@@ -19,6 +19,7 @@
   --accent:#B4541E; --accent-soft:#F3E4D8;
   --ok:#2F6B4F; --ok-bg:#E4EFE8; --no:#A32E2E; --no-bg:#F6E3E1;
   --warn:#8A6612; --warn-bg:#F4EBD6; --open:#44557A; --open-bg:#E3E7F0;
+  --inf:#5B5550; --inf-bg:#EAE5DE;
   --shadow:0 1px 2px rgba(26,23,20,.05),0 8px 24px -16px rgba(26,23,20,.25);
 }
 @media (prefers-color-scheme:dark){
@@ -28,6 +29,7 @@
     --accent:#E2884B; --accent-soft:#3A2717;
     --ok:#7FC49E; --ok-bg:#1B2C23; --no:#E58A82; --no-bg:#331E1C;
     --warn:#D9B45E; --warn-bg:#2E2716; --open:#9FB1D6; --open-bg:#1D2331;
+    --inf:#A9A199; --inf-bg:#2A2620;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
   }
 }
@@ -37,6 +39,7 @@
   --accent:#E2884B; --accent-soft:#3A2717;
   --ok:#7FC49E; --ok-bg:#1B2C23; --no:#E58A82; --no-bg:#331E1C;
   --warn:#D9B45E; --warn-bg:#2E2716; --open:#9FB1D6; --open-bg:#1D2331;
+  --inf:#A9A199; --inf-bg:#2A2620;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
 }
 *{box-sizing:border-box}
@@ -89,6 +92,7 @@ tbody tr:last-child td{border-bottom:none}
 .c-no{background:var(--no-bg);color:var(--no)}
 .c-warn{background:var(--warn-bg);color:var(--warn)}
 .c-open{background:var(--open-bg);color:var(--open)}
+.c-inf{background:var(--inf-bg);color:var(--inf)}
 footer{margin-top:3.5rem;padding-top:1.3rem;border-top:1px solid var(--rule);
   color:var(--muted);font-size:.85rem}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -106,7 +110,11 @@ disproved, and where the evidence for each claim lives.</p>
 session it happens — a finding that is not indexed is one nobody will locate in six
 months, which is the failure mode this file exists to prevent.</p>
 <ul>
-<li><strong>Status legend:</strong> <span class="chip c-ok">established</span> established · <span class="chip c-no">disproved</span> disproved · <span class="chip c-warn">bounded</span> partly true / bounded · <span class="chip c-open">open</span> open</li>
+<li><strong>Status legend:</strong> <span class="chip c-ok">measured</span> measured · <span class="chip c-no">disproved</span> disproved by measurement · <span class="chip c-warn">bounded</span> bounded or partly true ·
+<span class="chip c-inf">inferred</span> inferred, not directly measured · <span class="chip c-open">open</span> open</li>
+<li><strong>Measured and inferred are marked differently on purpose.</strong> An inference that reads like
+a measurement is how this file misleads someone six months from now, and an accuracy
+audit on 2026-08-24 found six claims stated more strongly than their evidence supported.</li>
 <li><strong>Every claim links to the evidence that supports it.</strong> If a row has no link, it does
 not belong here yet.</li>
 <li>A <strong>shareable</strong> version of this index is published as a web page — see
@@ -126,31 +134,74 @@ links, so it reads standalone.</li>
 <tbody>
 <tr>
 <td>Node <strong>positions</strong>, including undiscovered ones</td>
-<td><span class="chip c-ok">established</span> ~60–64% recall, whole map, 17 s</td>
+<td><span class="chip c-ok">measured</span> <strong>58.5–64.3%</strong> recall, whole map. 17 s on DeepDesert, 35.8 s on Hagga</td>
 <td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/2026-08-24-validation/README.md">validation</a></td>
 </tr>
 <tr>
-<td>Node <strong>types</strong> (which node is Titanium)</td>
-<td><span class="chip c-no">disproved</span> Unsolved — four routes ruled out</td>
-<td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/2026-08-24-issue-16/README.md#type-attribution-four-routes-tested-all-ruled-out">issue-16</a></td>
+<td><strong>Naming a resource class</strong> (this class is TitaniumOre)</td>
+<td><span class="chip c-ok">measured</span> <strong>Method works</strong> — 1–3 confirmations per class</td>
+<td><code>CONTINUATION.md</code> §6</td>
+</tr>
+<tr>
+<td><strong>Typing the nodes the census finds</strong></td>
+<td><span class="chip c-no">disproved</span> <strong>Cannot</strong> — the two channels barely overlap, see below</td>
+<td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/2026-08-24-issue-16/README.md">issue-16</a></td>
 </tr>
 <tr>
 <td>Spice + Flour Sand positions from the DB</td>
-<td><span class="chip c-warn">bounded</span> Exact, but only the inner ~87% of the map</td>
+<td><span class="chip c-warn">bounded</span> Exact for every field observed; a <strong>21-bit ceiling</strong> exists but no field beyond it has ever been seen</td>
 <td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/2026-08-24-field-id-21bit/README.md">field-id-21bit</a></td>
 </tr>
 <tr>
 <td>Named POIs from the DB</td>
-<td><span class="chip c-ok">established</span> Complete without exploration</td>
+<td><span class="chip c-inf">inferred</span> Every POI row is <code>long_range</code>; <strong>completeness is inferred</strong>, and post-storm timing is unobserved</td>
 <td><code>CONTINUATION.md</code> §4c</td>
 </tr>
 <tr>
 <td>Scanner works with <strong>zero players online</strong></td>
-<td><span class="chip c-open">open</span> Untested — the last post-storm dependency</td>
-<td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/2026-08-24-validation/README.md#the-instance-dependency--untested-and-it-is-the-real-constraint">validation</a></td>
+<td><span class="chip c-ok">measured</span> <strong>Proven</strong> — 64.0% coverage with nobody logged in, identical to the with-player run</td>
+<td><a href="https://github.com/Project-Arrakis/dune-resource-scanner/blob/main/findings/2026-08-24-validation/zero-player-experiment.txt">experiment</a></td>
 </tr>
 </tbody>
 </table></div>
+<h3>The type problem, stated precisely</h3>
+<p>This was previously summarised as &quot;types unsolved&quot;, which was wrong, and an operator
+challenge on 2026-08-24 forced the correction. Two true things were being conflated:</p>
+<div class="scroller"><table>
+<thead>
+<tr>
+<th>Channel</th>
+<th>Reach (same 211-marker box)</th>
+<th>Carries a class?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Actors resolved by proximity scan</td>
+<td><strong>6 / 211 = 2.8%</strong></td>
+<td><span class="chip c-ok">measured</span> yes — this is what §6 names</td>
+</tr>
+<tr>
+<td>Census spawn records</td>
+<td><strong>152 / 211 = 72.0%</strong></td>
+<td><span class="chip c-no">disproved</span> no</td>
+</tr>
+<tr>
+<td>Census records with an actor within 1 m</td>
+<td><strong>2 / 274 = 0.7%</strong></td>
+<td>— the ceiling on borrowing a class</td>
+</tr>
+</tbody>
+</table></div>
+<p>(The 72% here is the WindPass test box specifically; the 58.5–64.3% in the table above is
+map-wide across both maps. Different measurements, not a discrepancy.)</p>
+<p><strong>A working method to name a class exists and is proven</strong> (§6: scan a coordinate
+<code>dune.markers</code> already labels; whatever class sits there is that resource). What does not
+exist is a way to apply it to the 72% channel — only ~3% of nodes appear as actors at all,
+and only 0.7% of census records have an actor close enough to borrow a class from.</p>
+<p>So: <em>naming</em> is solved; <em>reaching</em> the nodes is not. Class pointers are also per-process,
+so they must be re-derived after every restart, which needs at least one discovered marker
+per type — unavailable at t=0 after a storm.</p>
 <hr />
 <h2>Findings</h2>
 <h3>2026-08-24 — Issue #16 root cause: ore nodes are not actors</h3>
@@ -164,7 +215,7 @@ links, so it reads standalone.</li>
 </thead>
 <tbody>
 <tr>
-<td><span class="chip c-ok">established</span></td>
+<td><span class="chip c-ok">measured</span></td>
 <td>Pass 1 locates <strong>211/211</strong> known markers (100%); pass 2 resolves <strong>6/211</strong> (2.8%). The loss is entirely in actor resolution</td>
 </tr>
 <tr>
@@ -172,16 +223,16 @@ links, so it reads standalone.</li>
 <td>The hypothesis #16 was opened with — back-references outside the scanned regions — is <strong>disproved</strong>. Offset-agnostically, <em>nothing</em> points into the 2 KB before these transforms</td>
 </tr>
 <tr>
-<td><span class="chip c-ok">established</span></td>
-<td>Ore/scrap/pickup nodes are <strong>384-byte spawn records</strong>, not UObject actors. Spice and flour sand are unaffected</td>
+<td><span class="chip c-inf">inferred</span></td>
+<td>Ore/scrap/pickup nodes appear to be <strong>384-byte spawn records</strong>, not UObject actors. The layout comes from <strong>one</strong> annotated memory dump; the census signature working across two maps supports it, but the record shape itself rests on a single sample. Spice and flour sand are unaffected</td>
 </tr>
 <tr>
-<td><span class="chip c-ok">established</span></td>
-<td>A signature-based census reaches <strong>64.3% DD / 58.5% Hagga</strong> in 17 s at 136 MB</td>
+<td><span class="chip c-ok">measured</span></td>
+<td>A signature-based census reaches <strong>64.3% DD / 58.5% Hagga</strong>, at 136 MB. <strong>17.0 s on DeepDesert, 35.8 s on Hagga</strong> — the single &quot;17 s&quot; figure previously quoted was DeepDesert only</td>
 </tr>
 <tr>
 <td><span class="chip c-no">disproved</span></td>
-<td><strong>Type attribution: four routes ruled out</strong> — the actor chain, all 48 record offsets, the object <code>+0</code> points at, and memory-address clustering</td>
+<td><strong>Four routes to typing a census record are ruled out</strong> — the actor chain, all 48 record offsets, the object <code>+0</code> points at, and memory-address clustering. This is <em>not</em> the same as &quot;types are unsolved&quot;: naming a class works (§6), it just cannot reach these records</td>
 </tr>
 </tbody>
 </table></div>
@@ -198,16 +249,16 @@ an annotated memory dump, and the census. Tools: <code>census.go</code>, <code>a
 </thead>
 <tbody>
 <tr>
-<td><span class="chip c-ok">established</span></td>
+<td><span class="chip c-ok">measured</span></td>
 <td><strong>Retrospective test</strong>: 60.2% of 1,667 markers discovered <em>after</em> the scan was captured, vs 64.8% of already-known ones. <strong>Discovery is not required</strong></td>
 </tr>
 <tr>
-<td><span class="chip c-ok">established</span></td>
+<td><span class="chip c-ok">measured</span></td>
 <td><strong>Cross-map test</strong>: the DD-derived signature gives 58.5% on Hagga — different map, authored terrain, a process that had restarted with fresh ASLR. Map- and process-independent</td>
 </tr>
 <tr>
-<td><span class="chip c-open">open</span></td>
-<td><strong>Zero-player operation untested.</strong> Every scan ran while a session was registered online; the autoscaler despawns 0-player instances after 300 s</td>
+<td><span class="chip c-ok">measured</span></td>
+<td><strong>Zero-player operation PROVEN</strong> (2026-08-24, after the operator logged out). The DeepDesert process stayed alive through T+120/240/330/420/540 s with <strong>zero</strong> online players — well past the autoscaler's 300 s grace period — and a full census then returned <strong>84,569 records at 64.0% marker coverage, identical to the 64.0% measured with a player online</strong>. This corrects the earlier &quot;untested&quot; entry, which the operator challenged and was right to</td>
 </tr>
 <tr>
 <td><span class="chip c-no">disproved</span></td>
@@ -230,11 +281,15 @@ an annotated memory dump, and the census. Tools: <code>census.go</code>, <code>a
 <td>The packing <strong>cannot represent the whole map</strong>: 21 bits signed gives ±1,048,575, and <strong>12.9% of real DD markers lie beyond it</strong>. Bit 63 is unused, so there is no escape flag</td>
 </tr>
 <tr>
+<td><span class="chip c-inf">inferred</span></td>
+<td><strong>The impact on the spice/flour-sand layer is unquantified.</strong> The 12.9% figure is over <em>markers</em>, not spice fields. Across all 141 <code>resourcefield_state</code> rows the largest decoded magnitude is <strong>1,044,975</strong> — just inside the limit — so <strong>no field beyond the ceiling has ever been observed</strong>. The practical impact may be zero; saying &quot;only the inner 87% works&quot; overstates what was measured</td>
+</tr>
+<tr>
 <td><span class="chip c-no">disproved</span></td>
 <td>A report that decode failures are range-overflow cases <strong>did not reproduce</strong>: none of 19 observed misses is near the limit, the most extreme in-range value decodes correctly, and un-aliasing rescues none</td>
 </tr>
 <tr>
-<td><span class="chip c-ok">established</span></td>
+<td><span class="chip c-ok">measured</span></td>
 <td>The misses are a <strong>scanner under-count</strong>, not a decode error — matched and missed rows have indistinguishable decoded-Z distributions</td>
 </tr>
 </tbody>
@@ -273,12 +328,54 @@ against another map's actors).</p>
 <td><strong>Every per-type count is <em>not checkable</em>, not wrong</strong> — Hagga accumulates discoveries forever, DD is re-rolled per Coriolis seed. <code>long_range</code> content, which <em>is</em> server-independent, agrees within 1.36× with three exact matches</td>
 </tr>
 <tr>
-<td><span class="chip c-ok">established</span></td>
+<td><span class="chip c-ok">measured</span></td>
 <td>All 26 named POI/vendor/trainer/House types exist; the SQL works; <code>field_kind_id</code> semantics correct</td>
 </tr>
 </tbody>
 </table></div>
 <hr />
+<h2>Accuracy audit — 2026-08-24</h2>
+<p>An operator challenge (&quot;I thought we had the data to prove node types&quot;) triggered a full
+re-check of this file. <strong>Six claims were stated more strongly than their evidence
+supported</strong>, all in the same direction — inferences written as measurements, and one
+outright wrong:</p>
+<div class="scroller"><table>
+<thead>
+<tr>
+<th>Claim as written</th>
+<th>Problem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&quot;Node types <span class="chip c-no">disproved</span> unsolved&quot;</td>
+<td><strong>Wrong.</strong> A working naming method exists (§6). What fails is reaching the census's nodes with it</td>
+</tr>
+<tr>
+<td>&quot;~60–64% recall&quot;</td>
+<td>Hagga is <strong>58.5%</strong> — the range understated its own low end</td>
+</tr>
+<tr>
+<td>&quot;in 17 s&quot;</td>
+<td>DeepDesert only; <strong>Hagga took 35.8 s</strong></td>
+</tr>
+<tr>
+<td>&quot;only the inner ~87% of the map&quot;</td>
+<td>Measured over <em>markers</em>, not spice fields. <strong>No field beyond the ceiling has ever been observed</strong></td>
+</tr>
+<tr>
+<td>POIs &quot;<span class="chip c-ok">measured</span> complete without exploration&quot;</td>
+<td>An <strong>inference</strong> from <code>long_range</code> plus one operator report, written as a measurement</td>
+</tr>
+<tr>
+<td>&quot;are 384-byte spawn records&quot;</td>
+<td>Rests on <strong>one</strong> memory dump</td>
+</tr>
+</tbody>
+</table></div>
+<p>None of these were fabrications; each was a real result generalised past its evidence.
+That is the specific failure mode this file now guards against with the <span class="chip c-inf">inferred</span> marker, and it
+is why the legend distinguishes measured from inferred at all.</p>
 <h2>Maintaining this file</h2>
 <p>When an investigation produces something worth keeping:</p>
 <ol>
@@ -289,8 +386,12 @@ to the evidence.</li>
 <li>If the finding <strong>changes or disproves an existing entry, edit that entry in place</strong> and
 say so — do not leave two rows disagreeing. Corrections are findings too, and the
 entries above deliberately record several.</li>
+<li><strong>State claims at the strength of their evidence.</strong> One dump is not a population; one
+map's timing is not both maps'; a percentage over markers is not a percentage over
+spice fields. Use <span class="chip c-inf">inferred</span> when the claim is an inference and say what it was inferred from.
+If a claim cannot be traced to a number in <code>findings/</code>, it does not belong here.</li>
 <li>Update the &quot;Current state at a glance&quot; table if the finding moves a capability.</li>
-<li>Re-publish the shared page (below) so the external view does not drift.</li>
+<li>Regenerate the page with <code>tools/build-findings-page.py</code>; CI fails if you forget.</li>
 </ol>
 <p>Large raw captures should be reduced or gzipped before committing; keep the full copy on
 the scan host under a persistent path, never <code>/tmp</code>.</p>
@@ -314,7 +415,7 @@ falling out of sync — <code>CONTINUATION.md</code> opens with a duplicate READ
 one day, and a single stale premise had to be corrected in three places in one session.
 A second hand-maintained copy of this index would be the same trap, so it is generated
 rather than written.</p>
-<p>The generator keeps the status markers meaningful: <span class="chip c-ok">established</span>/<span class="chip c-no">disproved</span>/<span class="chip c-warn">bounded</span>/<span class="chip c-open">open</span> become styled chips, tables
+<p>The generator keeps the status markers meaningful: <span class="chip c-ok">measured</span>/<span class="chip c-no">disproved</span>/<span class="chip c-warn">bounded</span>/<span class="chip c-open">open</span> become styled chips, tables
 get their own scroll container, and repo-relative links are rewritten to absolute GitHub
 URLs so they resolve on the standalone page.</p>
 <p>Note that <strong>GitHub will not render HTML from the repo or <code>raw.githubusercontent.com</code></strong> —

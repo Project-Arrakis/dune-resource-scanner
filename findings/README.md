@@ -7,7 +7,11 @@ disproved, and where the evidence for each claim lives.
 session it happens — a finding that is not indexed is one nobody will locate in six
 months, which is the failure mode this file exists to prevent.
 
-- **Status legend:** ✅ established · ❌ disproved · ⚠️ partly true / bounded · ❓ open
+- **Status legend:** ✅ measured · ❌ disproved by measurement · ⚠️ bounded or partly true ·
+  🔹 inferred, not directly measured · ❓ open
+- **Measured and inferred are marked differently on purpose.** An inference that reads like
+  a measurement is how this file misleads someone six months from now, and an accuracy
+  audit on 2026-08-24 found six claims stated more strongly than their evidence supported.
 - **Every claim links to the evidence that supports it.** If a row has no link, it does
   not belong here yet.
 - A **shareable** version of this index is published as a web page — see
@@ -20,11 +24,35 @@ months, which is the failure mode this file exists to prevent.
 
 | Capability | Status | Evidence |
 |---|---|---|
-| Node **positions**, including undiscovered ones | ✅ ~60–64% recall, whole map, 17 s | [validation](2026-08-24-validation/README.md) |
-| Node **types** (which node is Titanium) | ❌ Unsolved — four routes ruled out | [issue-16](2026-08-24-issue-16/README.md#type-attribution-four-routes-tested-all-ruled-out) |
-| Spice + Flour Sand positions from the DB | ⚠️ Exact, but only the inner ~87% of the map | [field-id-21bit](2026-08-24-field-id-21bit/README.md) |
-| Named POIs from the DB | ✅ Complete without exploration | `CONTINUATION.md` §4c |
-| Scanner works with **zero players online** | ❓ Untested — the last post-storm dependency | [validation](2026-08-24-validation/README.md#the-instance-dependency--untested-and-it-is-the-real-constraint) |
+| Node **positions**, including undiscovered ones | ✅ **58.5–64.3%** recall, whole map. 17 s on DeepDesert, 35.8 s on Hagga | [validation](2026-08-24-validation/README.md) |
+| **Naming a resource class** (this class is TitaniumOre) | ✅ **Method works** — 1–3 confirmations per class | `CONTINUATION.md` §6 |
+| **Typing the nodes the census finds** | ❌ **Cannot** — the two channels barely overlap, see below | [issue-16](2026-08-24-issue-16/README.md) |
+| Spice + Flour Sand positions from the DB | ⚠️ Exact for every field observed; a **21-bit ceiling** exists but no field beyond it has ever been seen | [field-id-21bit](2026-08-24-field-id-21bit/README.md) |
+| Named POIs from the DB | 🔹 Every POI row is `long_range`; **completeness is inferred**, and post-storm timing is unobserved | `CONTINUATION.md` §4c |
+| Scanner works with **zero players online** | ✅ **Proven** — 64.0% coverage with nobody logged in, identical to the with-player run | [experiment](2026-08-24-validation/zero-player-experiment.txt) |
+
+### The type problem, stated precisely
+
+This was previously summarised as "types unsolved", which was wrong, and an operator
+challenge on 2026-08-24 forced the correction. Two true things were being conflated:
+
+| Channel | Reach (same 211-marker box) | Carries a class? |
+|---|---|---|
+| Actors resolved by proximity scan | **6 / 211 = 2.8%** | ✅ yes — this is what §6 names |
+| Census spawn records | **152 / 211 = 72.0%** | ❌ no |
+| Census records with an actor within 1 m | **2 / 274 = 0.7%** | — the ceiling on borrowing a class |
+
+(The 72% here is the WindPass test box specifically; the 58.5–64.3% in the table above is
+map-wide across both maps. Different measurements, not a discrepancy.)
+
+**A working method to name a class exists and is proven** (§6: scan a coordinate
+`dune.markers` already labels; whatever class sits there is that resource). What does not
+exist is a way to apply it to the 72% channel — only ~3% of nodes appear as actors at all,
+and only 0.7% of census records have an actor close enough to borrow a class from.
+
+So: *naming* is solved; *reaching* the nodes is not. Class pointers are also per-process,
+so they must be re-derived after every restart, which needs at least one discovered marker
+per type — unavailable at t=0 after a storm.
 
 ---
 
@@ -38,9 +66,9 @@ months, which is the failure mode this file exists to prevent.
 |---|---|
 | ✅ | Pass 1 locates **211/211** known markers (100%); pass 2 resolves **6/211** (2.8%). The loss is entirely in actor resolution |
 | ❌ | The hypothesis #16 was opened with — back-references outside the scanned regions — is **disproved**. Offset-agnostically, *nothing* points into the 2 KB before these transforms |
-| ✅ | Ore/scrap/pickup nodes are **384-byte spawn records**, not UObject actors. Spice and flour sand are unaffected |
-| ✅ | A signature-based census reaches **64.3% DD / 58.5% Hagga** in 17 s at 136 MB |
-| ❌ | **Type attribution: four routes ruled out** — the actor chain, all 48 record offsets, the object `+0` points at, and memory-address clustering |
+| 🔹 | Ore/scrap/pickup nodes appear to be **384-byte spawn records**, not UObject actors. The layout comes from **one** annotated memory dump; the census signature working across two maps supports it, but the record shape itself rests on a single sample. Spice and flour sand are unaffected |
+| ✅ | A signature-based census reaches **64.3% DD / 58.5% Hagga**, at 136 MB. **17.0 s on DeepDesert, 35.8 s on Hagga** — the single "17 s" figure previously quoted was DeepDesert only |
+| ❌ | **Four routes to typing a census record are ruled out** — the actor chain, all 48 record offsets, the object `+0` points at, and memory-address clustering. This is *not* the same as "types are unsolved": naming a class works (§6), it just cannot reach these records |
 
 Evidence: the measured funnel before and after the NaN fix, offset-agnostic probes,
 an annotated memory dump, and the census. Tools: `census.go`, `analyse_census.py`.
@@ -53,7 +81,7 @@ an annotated memory dump, and the census. Tools: `census.go`, `analyse_census.py
 |---|---|
 | ✅ | **Retrospective test**: 60.2% of 1,667 markers discovered *after* the scan was captured, vs 64.8% of already-known ones. **Discovery is not required** |
 | ✅ | **Cross-map test**: the DD-derived signature gives 58.5% on Hagga — different map, authored terrain, a process that had restarted with fresh ASLR. Map- and process-independent |
-| ❓ | **Zero-player operation untested.** Every scan ran while a session was registered online; the autoscaler despawns 0-player instances after 300 s |
+| ✅ | **Zero-player operation PROVEN** (2026-08-24, after the operator logged out). The DeepDesert process stayed alive through T+120/240/330/420/540 s with **zero** online players — well past the autoscaler's 300 s grace period — and a full census then returned **84,569 records at 64.0% marker coverage, identical to the 64.0% measured with a player online**. This corrects the earlier "untested" entry, which the operator challenged and was right to |
 | ❌ | *Corrected*: an earlier claim that unmatched records were "not all nodes" was largely wrong — the Z gap cited was mostly exploration bias |
 
 ### 2026-08-24 — `field_id`'s 21-bit ceiling
@@ -63,6 +91,7 @@ an annotated memory dump, and the census. Tools: `census.go`, `analyse_census.py
 | | |
 |---|---|
 | ⚠️ | The packing **cannot represent the whole map**: 21 bits signed gives ±1,048,575, and **12.9% of real DD markers lie beyond it**. Bit 63 is unused, so there is no escape flag |
+| 🔹 | **The impact on the spice/flour-sand layer is unquantified.** The 12.9% figure is over *markers*, not spice fields. Across all 141 `resourcefield_state` rows the largest decoded magnitude is **1,044,975** — just inside the limit — so **no field beyond the ceiling has ever been observed**. The practical impact may be zero; saying "only the inner 87% works" overstates what was measured |
 | ❌ | A report that decode failures are range-overflow cases **did not reproduce**: none of 19 observed misses is near the limit, the most extreme in-range value decodes correctly, and un-aliasing rescues none |
 | ✅ | The misses are a **scanner under-count**, not a decode error — matched and missed rows have indistinguishable decoded-Z distributions |
 
@@ -85,6 +114,26 @@ against another map's actors).
 
 ---
 
+## Accuracy audit — 2026-08-24
+
+An operator challenge ("I thought we had the data to prove node types") triggered a full
+re-check of this file. **Six claims were stated more strongly than their evidence
+supported**, all in the same direction — inferences written as measurements, and one
+outright wrong:
+
+| Claim as written | Problem |
+|---|---|
+| "Node types ❌ unsolved" | **Wrong.** A working naming method exists (§6). What fails is reaching the census's nodes with it |
+| "~60–64% recall" | Hagga is **58.5%** — the range understated its own low end |
+| "in 17 s" | DeepDesert only; **Hagga took 35.8 s** |
+| "only the inner ~87% of the map" | Measured over *markers*, not spice fields. **No field beyond the ceiling has ever been observed** |
+| POIs "✅ complete without exploration" | An **inference** from `long_range` plus one operator report, written as a measurement |
+| "are 384-byte spawn records" | Rests on **one** memory dump |
+
+None of these were fabrications; each was a real result generalised past its evidence.
+That is the specific failure mode this file now guards against with the 🔹 marker, and it
+is why the legend distinguishes measured from inferred at all.
+
 ## Maintaining this file
 
 When an investigation produces something worth keeping:
@@ -96,8 +145,12 @@ When an investigation produces something worth keeping:
 3. If the finding **changes or disproves an existing entry, edit that entry in place** and
    say so — do not leave two rows disagreeing. Corrections are findings too, and the
    entries above deliberately record several.
-4. Update the "Current state at a glance" table if the finding moves a capability.
-5. Re-publish the shared page (below) so the external view does not drift.
+4. **State claims at the strength of their evidence.** One dump is not a population; one
+   map's timing is not both maps'; a percentage over markers is not a percentage over
+   spice fields. Use 🔹 when the claim is an inference and say what it was inferred from.
+   If a claim cannot be traced to a number in `findings/`, it does not belong here.
+5. Update the "Current state at a glance" table if the finding moves a capability.
+6. Regenerate the page with `tools/build-findings-page.py`; CI fails if you forget.
 
 Large raw captures should be reduced or gzipped before committing; keep the full copy on
 the scan host under a persistent path, never `/tmp`.

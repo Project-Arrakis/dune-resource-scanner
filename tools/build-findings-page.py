@@ -35,9 +35,10 @@ DESCRIPTION = ("What the Dune: Awakening resource-scanner project has establishe
 # Status markers carry real state, so they are rendered as chips rather than left
 # as bare emoji. Keys are the markers used in findings/README.md.
 CHIPS = {
-    "✅": ("c-ok", "established"),
+    "✅": ("c-ok", "measured"),
     "❌": ("c-no", "disproved"),
     "⚠️": ("c-warn", "bounded"),
+    "🔹": ("c-inf", "inferred"),
     "❓": ("c-open", "open"),
 }
 
@@ -48,6 +49,7 @@ STYLE = """
   --accent:#B4541E; --accent-soft:#F3E4D8;
   --ok:#2F6B4F; --ok-bg:#E4EFE8; --no:#A32E2E; --no-bg:#F6E3E1;
   --warn:#8A6612; --warn-bg:#F4EBD6; --open:#44557A; --open-bg:#E3E7F0;
+  --inf:#5B5550; --inf-bg:#EAE5DE;
   --shadow:0 1px 2px rgba(26,23,20,.05),0 8px 24px -16px rgba(26,23,20,.25);
 }
 @media (prefers-color-scheme:dark){
@@ -57,6 +59,7 @@ STYLE = """
     --accent:#E2884B; --accent-soft:#3A2717;
     --ok:#7FC49E; --ok-bg:#1B2C23; --no:#E58A82; --no-bg:#331E1C;
     --warn:#D9B45E; --warn-bg:#2E2716; --open:#9FB1D6; --open-bg:#1D2331;
+    --inf:#A9A199; --inf-bg:#2A2620;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
   }
 }
@@ -66,6 +69,7 @@ STYLE = """
   --accent:#E2884B; --accent-soft:#3A2717;
   --ok:#7FC49E; --ok-bg:#1B2C23; --no:#E58A82; --no-bg:#331E1C;
   --warn:#D9B45E; --warn-bg:#2E2716; --open:#9FB1D6; --open-bg:#1D2331;
+  --inf:#A9A199; --inf-bg:#2A2620;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
 }
 *{box-sizing:border-box}
@@ -118,6 +122,7 @@ tbody tr:last-child td{border-bottom:none}
 .c-no{background:var(--no-bg);color:var(--no)}
 .c-warn{background:var(--warn-bg);color:var(--warn)}
 .c-open{background:var(--open-bg);color:var(--open)}
+.c-inf{background:var(--inf-bg);color:var(--inf)}
 footer{margin-top:3.5rem;padding-top:1.3rem;border-top:1px solid var(--rule);
   color:var(--muted);font-size:.85rem}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

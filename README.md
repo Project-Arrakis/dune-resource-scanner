@@ -16,14 +16,21 @@ empty and no database can answer the question.
 | Capability | Status |
 |---|---|
 | Node **positions**, including ones nobody has discovered | ✅ ~60–64% recall, whole map, 17 s |
-| Node **types** — which node is Titanium | ❌ Unsolved. Four attribution routes ruled out |
+| **Naming a class** — "this class is TitaniumOre" | ✅ Works. Scan a coordinate the game already labels; 1–3 confirmations per class |
+| **Typing the nodes the census finds** | ❌ Cannot. Only ~3% of nodes appear as actors that carry a class; the census's 72% carry none |
 | Spice and Flour Sand from the database | ⚠️ Exact, but only the inner ~87% of the map |
-| Named points of interest from the database | ✅ Complete without exploration |
+| Named points of interest from the database | 🔹 Every POI row is revealed at range; completeness is inferred |
+| Works with **zero players online** | ✅ Proven — 64.0% coverage with nobody logged in, identical to a with-player scan |
 
 The headline result is that the scanner finds nodes **before anyone has discovered them** —
 60.2% of markers that appeared *after* a scan was taken, against 64.8% for markers already
 known. That is the capability the whole project exists for, and it is measured rather than
-assumed. What is still missing is a *name* for each node, not a position.
+assumed.
+
+What is missing is not a *method* for naming resources — that exists and is proven. It is a
+way to apply it at scale: naming works through actors, and only ~3% of nodes appear as
+actors, while the channel that finds 72% of them carries no class at all. See the findings
+for the measured breakdown.
 
 ## What it does
 

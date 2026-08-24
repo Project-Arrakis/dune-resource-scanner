@@ -1,0 +1,14 @@
+T+120s  DD pid=390735 up=05:52:50  players=0
+T+240s  DD pid=390735 up=05:54:51  players=0
+T+330s  DD pid=390735 up=05:56:21  players=0
+T+420s  DD pid=390735 up=05:57:51  players=0
+T+540s  DD pid=390735 up=05:59:52  players=0
+--- final: attempt a full census with zero players ---
+strict signature records:  84569
+relaxed-only records:      0
+total emitted:             84569 (aborted=false)
+wrote /home/dune/scan-findings/dd-census-ZEROPLAYER.jsonl
+--- census completed ---
+records: 84,569
+marker coverage: 6,148 / 9,601 = 64.0%
+(with a player online, the same scan gave 84,600 records and the identical 64.0%)

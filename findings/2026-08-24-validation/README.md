@@ -72,9 +72,19 @@ Two Hagga-specific low scores worth noting: `EnemyCamp` 5.3% and `ErythriteOre`
 5.3%. Enemy camps are structures, so 5% is consistent with the POI result;
 Erythrite is unexplained and worth a look.
 
-## The instance dependency — untested, and it is the real constraint
+## The instance dependency — RESOLVED 2026-08-24: no player required
 
-**Every scan on 2026-08-24 ran while a player session was registered online.**
+**Update: this section's original conclusion was wrong, and the operator said so.** The
+experiment was run once they logged out. With **zero** online players the DeepDesert
+process stayed alive through T+120/240/330/420/540 s — well past the autoscaler's 300 s
+grace period — and a full census then returned **84,569 records at 64.0% marker coverage,
+identical to the 64.0% measured with a player online**. Raw log:
+[`zero-player-experiment.txt`](zero-player-experiment.txt).
+
+**No player is required.** The post-storm path has no player dependency.
+
+The original reasoning, kept because it shows what was actually measured at the time:
+every scan before that point ran while a player session was registered online.
 `dune admin players --online` showed `<fls-id> / <character>` as `Online` on
 `DeepDesert_1` partition 8 throughout, including during the census runs, and the DD
 process had been up 4h45m continuously.
@@ -88,7 +98,7 @@ Separate the two requirements, because they are often conflated:
 | Requirement | Status |
 |---|---|
 | Nodes must have been **discovered** | **Disproven** — the retrospective test above finds 60.2% of markers discovered *after* the scan |
-| A DD **instance must exist** (i.e. a player on the map, or within the 300 s grace period) | **Untested. Assume it is required.** |
+| A DD **instance must exist** (i.e. a player on the map, or within the 300 s grace period) | **Disproved 2026-08-24** — a full census succeeded with zero players, 9 minutes after logout, at identical coverage |
 
 §5c is the reason to expect the second one is *only* about instance existence rather than
 player proximity: a D-4 scan returned resource actors from ~27 km away with no player
@@ -116,8 +126,8 @@ on the database, and do not depend on anything having been discovered.
 four routes ruled out, see `../2026-08-24-issue-16/README.md`. The map this supports
 today is "a resource node is here", not "titanium is here".
 
-**Not established**: whether any of this works with no player on the map. See the
-section above — this is now the single open dependency on the post-storm path.
+**Also established**: it works with **no player on the map at all** — measured, not
+inferred. See the section above.
 
 **Still worth doing in game**, when convenient: visiting a predicted node with no
 marker would confirm directly rather than inferentially, and would also show whether
