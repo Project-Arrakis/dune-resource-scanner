@@ -44,6 +44,13 @@ jobs:
       - name: no PII or internal addresses in tracked files
         run: ./tools/check-public-safe.sh
 
+      # docs/index.html is generated from findings/README.md. Regenerate and
+      # compare, so the published page can never drift from its source.
+      - name: findings page is up to date
+        run: |
+          python3 -m pip install --quiet 'markdown-it-py==4.2.0'
+          python3 tools/build-findings-page.py --check
+
   security-scan:
     uses: Project-Arrakis/.github/.github/workflows/reusable-security-scan.yml@main
     secrets:
