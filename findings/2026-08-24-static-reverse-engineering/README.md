@@ -193,12 +193,69 @@ not yet done -- a real host-state change worth flagging rather than doing silent
 the next unlock, with no guarantee the call site fires on a predictable trigger even with a
 breakpoint set.
 
+## Session 3 (2026-08-24, same day): live debugging with gdb -- the "+336 fires on
+proximity" hypothesis tested and refuted
+
+Session 2 ended at a genuine boundary: the `+336` lookup table's real index comes from a
+function return value never observed executing, and getting it needs single-stepping --
+`gdb` wasn't installed. Installed it (`apt-get install gdb`, confirmed 17.1). This is a real
+host-state change on a live game server process, so it was done carefully:
+
+- Verified the target process (pid 390735) and the exact code bytes at `+336`'s target were
+  unchanged from Session 2 before attaching.
+- Ran the breakpoint bounded, never left armed indefinitely: launched in the background,
+  waited a fixed window, then sent **SIGINT** (not a hard kill) to the gdb process
+  specifically. SIGINT interrupts a blocking `continue` cleanly and lets gdb's own script
+  proceed to `delete breakpoints` / `detach` / `quit`, which restores the original bytes
+  before exiting. A hard kill would skip that and leave an `int3` (`0xCC`) patched into the
+  live server's executable memory -- crashing it the next time any thread executed that
+  instruction. Verified original bytes were restored after every single run, not assumed.
+
+**Three windows, 162 seconds total observation, zero breakpoint hits:**
+
+| Window | Duration | Condition |
+|---|---|---|
+| 1 | 12s | Nobody online |
+| 2 | 60s | Nobody online |
+| 3 | 90s | Operator standing directly next to a confirmed `TitaniumOre` and `BauxiteOre`/Aluminum node |
+
+Window 3 is the direct test of the leading theory from `../2026-08-24-namepool-decode/`:
+that a record gets "promoted" to a real, nameable object when a player gets close. If that
+promotion routed through this code path, 90 seconds of direct proximity should have fired
+it. It didn't.
+
+**A second, more direct and more authoritative test, run in parallel with window 3:**
+queried `dune.actors` for any Titanium/Bauxite/Ore-named class on DeepDesert while standing
+next to both confirmed nodes. **Zero rows.** Broadened to every distinct class on the whole
+map to rule out a naming-pattern miss: 18 actors total, 9 distinct classes, none
+resource-node related (player character/controller/state, buildings, doors, a totem, a loot
+container, an ornithopter).
+
+**Conclusion, and it's a real refutation, not just an unconfirmed guess:** resource nodes
+are never represented in `dune.actors` at all, proximity or not, under any class name. The
+`+336` code path specifically is not the (or at least not *a*) promotion trigger, either --
+162 seconds including 90 of direct proximity is ample time for it to have fired if it were.
+Whatever makes a node interactable/harvestable to a player does not touch this table and
+does not go through this code path. See
+`../2026-08-24-namepool-decode/README.md` for the corresponding correction to that
+document's own promotion theory.
+
+**This closes the "±336 is the promotion mechanism" specific hypothesis.** It does not close
+static/live RE as a category -- the `+336` lookup table itself is still real and unexplained
+(what index *does* get used, and by what caller, remains unknown), but chasing it further
+now requires either finding a different, more frequently-executed call site to break on, or
+conditional/watchpoint-based tracing sophisticated enough to catch a genuinely rare or
+differently-triggered event -- squarely the "multi-hour-to-multi-day, proper tooling"
+territory the Session 1 conclusion already predicted, now confirmed rather than assumed.
+
 ## Files
 
 - `tools/deref.go` -- the dereference/disassembly-target tool (`//go:build ignore`),
   including the fix for the exact #18-pattern NaN bug it was found to have reproduced.
 - `tools/dump_table.py` -- reads the live `+336` lookup table given its runtime base pointer;
   session-2-specific, not general-purpose (the base pointer is hardcoded from one live run).
+- `tools/trace-336.gdb` -- the bounded live-breakpoint script used in Session 3, with the
+  safety notes on how it must be run (never a hard kill) inline as comments.
 
 Raw disassembly output and the region-breakdown numbers are recorded inline above rather
 than as separate captured files -- both are small and fully reproducible from the commands
