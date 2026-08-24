@@ -58,6 +58,30 @@ per type — unavailable at t=0 after a storm.
 
 ## Findings
 
+### 2026-08-24 — Post-storm scan hardened, tested, and actually scheduled
+
+**[`2026-08-24-storm-watch/`](2026-08-24-storm-watch/)**
+
+| | |
+|---|---|
+| ❌ | *Corrected*: this was reported as "still queued" in conversation while it had, in fact, never been scheduled -- the setup was built, then dropped mid-session. Caught when asked directly how to ensure it succeeds |
+| ✅ | Replaced a fragile single-fixed-time plan with an idempotent windowed cron job (every 10 min, 04:00-07:59), self-bounded to one date |
+| ✅ | Mechanism proven live before trusting it 17 hours unattended: 5 consecutive clean firings, `dune` CLI resolving correctly under cron's minimal environment (a real, common failure mode this catches) |
+| ❌ | Two real bugs caught before deploy: a Python/bash quote-escaping mix-up that silently corrupted the first script version, and an awk permission-bit off-by-one |
+
+### 2026-08-24 — Static disassembly of the game binary: real attempt, inconclusive
+
+**[`2026-08-24-static-reverse-engineering/`](2026-08-24-static-reverse-engineering/)**
+
+| | |
+|---|---|
+| ✅ | **A real, unscanned 2.13 GB of read-only anonymous memory found** -- structurally a better candidate for type tables than anything examined so far (all prior candidates were per-instance heap data) |
+| 🔹 | One of the three previously-dead EXE pointers, disassembled: a structurally FName-suggestive pattern (cached lookup index in writable memory, sentinel check, block-masked pointer reads) |
+| ❌ | The traced call resolved to a plain `libc.so.6` function, not game-specific code -- **inconclusive, not confirmation** |
+| ⚠️ | Full resolution would need proper decompilation tooling and considerably more tracing -- stated as a real multi-hour-to-multi-day undertaking, not implied to be close |
+
+
+
 ### 2026-08-24 — Issue #16 root cause: ore nodes are not actors
 
 **[`2026-08-24-issue-16/`](2026-08-24-issue-16/)**
@@ -80,6 +104,7 @@ an annotated memory dump, and the census. Tools: `census.go`, `analyse_census.py
 | | |
 |---|---|
 | ✅ | **Retrospective test**: 60.2% of 1,667 markers discovered *after* the scan was captured, vs 64.8% of already-known ones. **Discovery is not required** |
+| ✅ | **Three live confirmations, in-game -- including an unfiltered sample.** Flying into unexplored terrain, the operator confirmed `StravidiumOre` and `TitaniumOre` individually (1.8-10.9 m off, census predicted both within 1.1 m), then found a cluster of **five** never-before-seen nodes and checked all five, not just the hits: **3/5 matched the census (60%), landing almost exactly on the 60.2%/64.8% aggregate recall** measured earlier. The two misses were near-misses (107 m, 424 m), not wrong-area failures |
 | ✅ | **Per-cell recall is uniform**: 61-79% across six independent well-explored cells, around the 64.0% map-wide mean — not an artifact of one region. **54 of 86 cells are essentially unexplored and hold 43,754 records**, over half the census, in terrain nobody has visited |
 | ✅ | **Cross-map test**: the DD-derived signature gives 58.5% on Hagga — different map, authored terrain, a process that had restarted with fresh ASLR. Map- and process-independent |
 | ✅ | **Zero-player operation PROVEN** (2026-08-24, after the operator logged out). The DeepDesert process stayed alive through T+120/240/330/420/540 s with **zero** online players — well past the autoscaler's 300 s grace period — and a full census then returned **84,569 records at 64.0% marker coverage, identical to the 64.0% measured with a player online**. This corrects the earlier "untested" entry, which the operator challenged and was right to |
