@@ -1,0 +1,69 @@
+=== pre-storm baseline scan starting: 2026-08-24T19:57:10+00:00 (local: Mon Aug 24 12:57:10 PDT 2026) ===
+
+--- seed check ---
+                 m                  | s  
+------------------------------------+----
+ Arrakeen                           | 11
+ CB_Dungeon_Hephaestus              | -1
+ CB_Dungeon_OldCarthag              | -1
+ CB_Dungeon_ThePit                  | -1
+ CB_Ecolab_Bronze_Green_024         | -1
+ CB_Ecolab_Bronze_Green_089         | -1
+ CB_Ecolab_Bronze_Green_136         | -1
+ CB_Ecolab_Bronze_Green_152         | -1
+ CB_Ecolab_Bronze_Green_195         | -1
+ CB_Overland_M_01                   | -1
+ CB_Overland_S_04                   | -1
+ CB_Overland_S_06                   | -1
+ CB_Overland_S_07                   | -1
+ CB_Overland_S_08                   | -1
+ CB_Story_BanditFortress01          | -1
+ CB_Story_Ecolab_Carthag            | -1
+ CB_Story_Hephaestus                | -1
+ CB_Story_WaterFatManor             | -1
+ DLC_Story_LostHarvest_EcolabA      | -1
+ DLC_Story_LostHarvest_EcolabB      | -1
+ DLC_Story_LostHarvest_ForgottenLab | -1
+ DeepDesert                         |  2
+ DeepDesert_1                       | -1
+ HaggaBasin                         |  2
+ HarkoVillage                       | 11
+ Overland                           |  2
+ Overmap                            | -1
+ SH_Arrakeen                        | -1
+ SH_HarkoVillage                    | -1
+ Story_ArtOfKanly                   | -1
+ Story_Faction_Outpost_Atre         | -1
+ Story_Faction_Outpost_Hark         | -1
+ Story_HeighlinerDungeon            | -1
+ Story_ProcesVerbal                 | -1
+ Survival_1                         | -1
+(35 rows)
+
+DeepDesert seed at scan time: 2
+
+--- resolving DeepDesert_1 PID (never hardcoded; matched by RSS to skip the
+    /bin/sh wrapper, which shares a truncated comm with the binary) ---
+DeepDesert_1 PID resolved: 390735
+    PID     ELAPSED   RSS COMMAND
+ 390735    07:54:03 10106368 DuneSandboxServ
+
+--- capturing markers ---
+markers captured: 10488
+
+--- running census against PID 390735 ---
+raw plausible-XYZ triples: 42085099
+strict signature records:  84559
+relaxed-only records:      0
+total emitted:             84559 (aborted=false)
+wrote /home/dune/scan-findings/pre-storm-20260824T195710Z/census.jsonl
+elapsed=39.77s maxrss=136408kB
+
+=== pre-storm baseline scan complete: 2026-08-24T19:57:51+00:00 ===
+total 66372
+drwxrwxr-x 2 dune dune     4096 Aug 24 12:57 .
+drwxrwxr-x 4 dune dune     4096 Aug 24 12:57 ..
+-rw-r--r-- 1 root root 67526514 Aug 24 12:57 census.jsonl
+-rw-rw-r-- 1 dune dune   417977 Aug 24 12:57 markers.csv
+-rw-rw-r-- 1 dune dune     2362 Aug 24 12:57 run.log
+-rw-rw-r-- 1 dune dune     1530 Aug 24 12:57 seeds.txt
