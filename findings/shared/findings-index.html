@@ -1,0 +1,290 @@
+<title>Deep Desert Scanner Findings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#FBFAF7; --raise:#FFFFFF; --ink:#1A1714; --body:#3A332C;
+    --muted:#6E655C; --rule:#E3DDD4; --rule-soft:#EFEAE2;
+    --accent:#B4541E; --accent-soft:#F3E4D8;
+    --ok:#2F6B4F; --ok-bg:#E4EFE8;
+    --no:#A32E2E; --no-bg:#F6E3E1;
+    --warn:#8A6612; --warn-bg:#F4EBD6;
+    --open:#44557A; --open-bg:#E3E7F0;
+    --shadow:0 1px 2px rgba(26,23,20,.05),0 8px 24px -16px rgba(26,23,20,.25);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#14120F; --raise:#1D1A16; --ink:#F1ECE4; --body:#D3CBC0;
+      --muted:#9A9086; --rule:#332E27; --rule-soft:#262219;
+      --accent:#E2884B; --accent-soft:#3A2717;
+      --ok:#7FC49E; --ok-bg:#1B2C23;
+      --no:#E58A82; --no-bg:#331E1C;
+      --warn:#D9B45E; --warn-bg:#2E2716;
+      --open:#9FB1D6; --open-bg:#1D2331;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#14120F; --raise:#1D1A16; --ink:#F1ECE4; --body:#D3CBC0;
+    --muted:#9A9086; --rule:#332E27; --rule-soft:#262219;
+    --accent:#E2884B; --accent-soft:#3A2717;
+    --ok:#7FC49E; --ok-bg:#1B2C23;
+    --no:#E58A82; --no-bg:#331E1C;
+    --warn:#D9B45E; --warn-bg:#2E2716;
+    --open:#9FB1D6; --open-bg:#1D2331;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--ground); color:var(--body);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:60rem;margin:0 auto;padding:clamp(2rem,5vw,4.5rem) clamp(1.1rem,4vw,2.5rem) 5rem}
+
+  .masthead{display:flex;flex-direction:column;gap:.9rem;padding-bottom:1.6rem;border-bottom:2px solid var(--ink)}
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.7rem; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--accent); margin:0;
+  }
+  h1{
+    font-family:"IBM Plex Serif",Georgia,serif; font-weight:600; color:var(--ink);
+    font-size:clamp(2rem,5.5vw,3rem); line-height:1.1; margin:0; text-wrap:balance;
+    letter-spacing:-.015em;
+  }
+  .standfirst{margin:0;max-width:60ch;font-size:1.05rem;color:var(--body)}
+  .meta{
+    display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;margin:0;padding:0;list-style:none;
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.76rem;color:var(--muted);
+  }
+  .meta b{color:var(--ink);font-weight:500}
+
+  h2{
+    font-family:"IBM Plex Serif",Georgia,serif;font-weight:600;color:var(--ink);
+    font-size:1.55rem;line-height:1.2;margin:0;text-wrap:balance;letter-spacing:-.01em;
+  }
+  section{margin-top:3.2rem;display:flex;flex-direction:column;gap:1.1rem}
+  .lede{margin:0;max-width:66ch}
+  p{margin:0;max-width:66ch}
+
+  /* status readout */
+  .readout{display:grid;gap:.55rem;margin:0;padding:0;list-style:none}
+  .readout li{
+    display:grid;grid-template-columns:auto 1fr auto;gap:.75rem 1rem;align-items:baseline;
+    background:var(--raise);border:1px solid var(--rule);border-radius:2px;
+    padding:.8rem .95rem;box-shadow:var(--shadow);
+  }
+  .readout .what{color:var(--ink);font-weight:500}
+  .readout .detail{
+    grid-column:1/-1;font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:.79rem;color:var(--muted);font-variant-numeric:tabular-nums;
+  }
+
+  .chip{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.68rem;letter-spacing:.08em;
+    text-transform:uppercase;padding:.2rem .45rem;border-radius:2px;white-space:nowrap;font-weight:500;
+  }
+  .c-ok{background:var(--ok-bg);color:var(--ok)}
+  .c-no{background:var(--no-bg);color:var(--no)}
+  .c-warn{background:var(--warn-bg);color:var(--warn)}
+  .c-open{background:var(--open-bg);color:var(--open)}
+
+  /* finding entries */
+  .entry{
+    border-top:1px solid var(--rule);padding-top:1.4rem;
+    display:flex;flex-direction:column;gap:.9rem;
+  }
+  .entry h3{
+    font-family:"IBM Plex Serif",Georgia,serif;font-size:1.2rem;font-weight:600;
+    color:var(--ink);margin:0;line-height:1.25;text-wrap:balance;
+  }
+  .claims{display:grid;gap:.5rem;margin:0;padding:0;list-style:none}
+  .claims li{display:grid;grid-template-columns:auto 1fr;gap:.75rem;align-items:baseline}
+  .claims .txt{max-width:64ch}
+  .num{font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--ink);font-variant-numeric:tabular-nums}
+
+  .callout{
+    background:var(--accent-soft);border-left:3px solid var(--accent);
+    padding:.9rem 1.05rem;border-radius:0 2px 2px 0;
+  }
+  .callout p{max-width:62ch}
+  .callout strong{color:var(--ink)}
+
+  .scroller{overflow-x:auto;border:1px solid var(--rule);border-radius:2px;background:var(--raise)}
+  table{border-collapse:collapse;width:100%;font-size:.88rem}
+  caption{
+    text-align:left;padding:.75rem .9rem;color:var(--muted);border-bottom:1px solid var(--rule-soft);
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.74rem;letter-spacing:.05em;text-transform:uppercase;
+  }
+  th,td{padding:.5rem .9rem;text-align:left;border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+  th{color:var(--ink);font-weight:600;font-size:.76rem;letter-spacing:.05em;text-transform:uppercase}
+  td.n{text-align:right;font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  tbody tr:last-child td{border-bottom:none}
+  .hi{color:var(--ink);font-weight:500}
+
+  code{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.86em;
+    background:var(--rule-soft);padding:.1rem .3rem;border-radius:2px;color:var(--ink);
+  }
+  footer{margin-top:3.5rem;padding-top:1.3rem;border-top:1px solid var(--rule);color:var(--muted);font-size:.85rem}
+  footer p{max-width:66ch}
+  a{color:var(--accent)}
+  a:focus-visible,li:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Findings index · maintained</p>
+    <h1>Deep Desert Scanner Findings</h1>
+    <p class="standfirst">
+      What has been established about reading resource-node positions from a live
+      <em>Dune: Awakening</em> server, what has been disproved, and what remains open.
+      Every claim here is measured against the game database as ground truth.
+    </p>
+    <ul class="meta">
+      <li>Last updated <b>2026-08-24</b></li>
+      <li>Ground truth <b>15,553 markers</b></li>
+      <li>Both maps on Coriolis seed <b>2</b></li>
+    </ul>
+  </header>
+
+  <section>
+    <h2>Where this stands</h2>
+    <ul class="readout">
+      <li>
+        <span class="chip c-ok">Established</span>
+        <span class="what">Node positions, including undiscovered ones</span>
+        <span class="chip c-ok">60–64%</span>
+        <span class="detail">whole map in 17 s at 136 MB · needs no database</span>
+      </li>
+      <li>
+        <span class="chip c-no">Blocked</span>
+        <span class="what">Node types — which node is Titanium</span>
+        <span class="chip c-no">0 of 4 routes</span>
+        <span class="detail">four attribution routes tested and ruled out</span>
+      </li>
+      <li>
+        <span class="chip c-warn">Bounded</span>
+        <span class="what">Spice and Flour Sand positions from the database</span>
+        <span class="chip c-warn">inner 87%</span>
+        <span class="detail">exact where representable · 21-bit packing limit</span>
+      </li>
+      <li>
+        <span class="chip c-ok">Established</span>
+        <span class="what">Named points of interest from the database</span>
+        <span class="chip c-ok">complete</span>
+        <span class="detail">revealed at range · no exploration required</span>
+      </li>
+      <li>
+        <span class="chip c-open">Open</span>
+        <span class="what">Does a scan work with zero players online?</span>
+        <span class="chip c-open">untested</span>
+        <span class="detail">the last dependency on the post-storm path</span>
+      </li>
+    </ul>
+    <div class="callout">
+      <p><strong>The practical summary.</strong> Immediately after a Coriolis storm you could
+      publish spice by tier, flour sand, player bases, points of interest, and an
+      <em>unlabelled</em> “a resource node is here” layer. You could not yet say which node
+      is Titanium and which is a bush.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Findings</h2>
+
+    <article class="entry">
+      <h3>Ore nodes are not actors — root cause of the recall defect</h3>
+      <ul class="claims">
+        <li><span class="chip c-ok">Established</span><span class="txt">The position search locates <span class="num">211 of 211</span> known markers. Resolving those to actors yields <span class="num">6 of 211</span>. The loss is entirely in resolution, not search.</span></li>
+        <li><span class="chip c-no">Disproved</span><span class="txt">The original hypothesis — that back-references lay outside the scanned memory regions. Searched without assuming any offset, <em>nothing</em> in memory points into the 2 KB preceding these nodes.</span></li>
+        <li><span class="chip c-ok">Established</span><span class="txt">Ore, scrap and pickup nodes are <strong>384-byte spawn records</strong>, not engine actors. Spice and flour sand are unaffected, which is why that path always worked.</span></li>
+        <li><span class="chip c-no">Disproved</span><span class="txt">Type attribution via the record fields, the object it references, or memory placement. All four routes ruled out against 2,931 unambiguously labelled records.</span></li>
+      </ul>
+    </article>
+
+    <article class="entry">
+      <h3>The scanner finds nodes nobody has discovered</h3>
+      <p class="lede">The decisive test, and it needed nobody in game. The marker table grew
+      while the map was explored; anything discovered <em>after</em> a scan was captured is a
+      blind test the scanner could not have known about.</p>
+      <div class="scroller">
+        <table>
+          <caption>Coverage of markers known before versus after the scan</caption>
+          <thead><tr><th>Marker set</th><th class="n">Found</th><th class="n">Total</th><th class="n">Rate</th></tr></thead>
+          <tbody>
+            <tr><td>Known when the scan was taken</td><td class="n">5,144</td><td class="n">7,934</td><td class="n hi">64.8%</td></tr>
+            <tr><td>Discovered <em>after</em> the scan</td><td class="n">1,004</td><td class="n">1,667</td><td class="n hi">60.2%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Statistically the same rate. The remaining gap is type mix, not capability. Applied
+      unchanged to the second map — authored terrain, a different process that had restarted
+      — it holds at <span class="num">58.5%</span> against <span class="num">64.3%</span>, so
+      the method is independent of map and of process.</p>
+    </article>
+
+    <article class="entry">
+      <h3>The coordinate packing cannot describe the whole map</h3>
+      <ul class="claims">
+        <li><span class="chip c-warn">Bounded</span><span class="txt">Three 21-bit signed fields give a range of ±1,048,575. Deep Desert reaches roughly ±1.27M, so <strong><span class="num">12.9%</span> of real markers cannot be encoded at all</strong>. The spare 64th bit is unused, so there is no escape mechanism.</span></li>
+        <li><span class="chip c-no">Disproved</span><span class="txt">An external report attributing decode failures to this overflow. None of the 19 observed failures is near the limit; the most extreme in-range value decodes correctly; and reversing the wrap rescues none of them.</span></li>
+        <li><span class="chip c-ok">Established</span><span class="txt">Those failures are a scanner under-count, not a decode error — failed and successful rows have indistinguishable decoded elevation distributions, which a broken decode could not produce.</span></li>
+      </ul>
+      <div class="callout">
+        <p><strong>Why this still matters.</strong> An out-of-range coordinate does not fail
+        loudly — it wraps to a plausible-looking value of the opposite sign. Silently wrong is
+        worse than missing, so consumers should range-check rather than trust the decode.</p>
+      </div>
+    </article>
+
+    <article class="entry">
+      <h3>External document reviewed — the “marker atlas”</h3>
+      <p class="lede">A third-party description of the database schema, checked claim by claim.
+      The structure is sound; the framing is not.</p>
+      <ul class="claims">
+        <li><span class="chip c-ok">Accurate</span><span class="txt">All 26 named point-of-interest, vendor, trainer and faction types exist. The example queries work. Resource-kind semantics and all three spice tier values are correct.</span></li>
+        <li><span class="chip c-no">Inaccurate</span><span class="txt">The marker composite type has <strong>five</strong> fields, not the four described, and the first is named differently — code written to the stated definition fails outright.</span></li>
+        <li><span class="chip c-no">Inaccurate</span><span class="txt">The partition table holds <span class="num">30</span> maps, not 39. The claimed “devoured by a sandworm” event type does not exist, and the document's own query for it returns nothing.</span></li>
+        <li><span class="chip c-warn">Not checkable</span><span class="txt">Every per-type count, including the headline total. These are not errors — see below.</span></li>
+      </ul>
+      <p>The counts looked contradictory at first: some five to twelve times ours, others
+      barely half. That is fully explained once split by map. One map is authored and never
+      resets, so discoveries accumulate indefinitely; the other is regenerated by every
+      Coriolis storm, so its counts belong to whichever seed is live.</p>
+      <div class="scroller">
+        <table>
+          <caption>Claims that can be checked versus claims that cannot</caption>
+          <thead><tr><th>Content class</th><th>Why</th><th class="n">Agreement</th></tr></thead>
+          <tbody>
+            <tr><td>Revealed at range</td><td>Complete without exploration — server-independent</td><td class="n hi">within 1.36×, three exact</td></tr>
+            <tr><td>Requires discovery</td><td>A snapshot of one server and one seed</td><td class="n">0.29× – 12.94×</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>So the arithmetic is not the problem. Presenting a per-server, per-seed discovery log
+      as a fixed atlas is. Anyone treating those counts as world constants will be wrong on
+      every other server, and wrong on that one after its next storm.</p>
+    </article>
+
+    <article class="entry">
+      <h3>Corrections issued</h3>
+      <p class="lede">Recorded deliberately — a finding that quietly replaces an earlier one
+      leaves the next reader unable to tell which was checked.</p>
+      <ul class="claims">
+        <li><span class="chip c-no">Retracted</span><span class="txt">A claim that unmatched scan records were mostly not real nodes. The elevation gap cited turned out to be exploration bias — explored ground is simply lower — and a structural test then passed 96.4% of all records as indistinguishable from confirmed nodes.</span></li>
+        <li><span class="chip c-no">Retracted</span><span class="txt">A prior session's note that the administrative teleport command works with a delay. Re-tested three ways, including a short hop inside already-loaded terrain: accepted every time, and the character never moved.</span></li>
+        <li><span class="chip c-warn">Qualified</span><span class="txt">An external count discrepancy first read as internally inconsistent. The operator identified the cause — a far larger, busier server — and the per-map split confirmed it.</span></li>
+      </ul>
+    </article>
+  </section>
+
+  <footer>
+    <p>Measured against a development server's live database and process memory. Counts
+    reflect one server at one moment; percentages are recall against known markers.
+    Operational detail — hosts, addresses and player identifiers — is deliberately omitted.</p>
+  </footer>
+</div>
