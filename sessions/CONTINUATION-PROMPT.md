@@ -58,16 +58,18 @@ way? Check `~/scan-findings/storm-watch.log` on `dune-dev` and whatever
 
 ## Smaller open items, still real
 
-- **Hagga Basin Jasmine discovery test — never actually completed.** Was set up
-  (`~/scan-findings/re/hagga-markers-before.csv`, `hagga-census-before.jsonl` against PID
-  380152, the "Overmap" process that serves Hagga) but the operator got redirected to the
-  A4/Ecolab excursion instead, which turned out more valuable. Worth doing if there's a
-  quiet moment: Hagga's spawn-record census only ever found **112 total records** for the
-  whole map (vs. DD's ~84,500) — strongly suggesting Hagga's resources are ordinary
-  pre-placed level actors, not this spawn-record system at all. A Jasmine discovery there
-  would test a *different* system than everything else in this document. **Needs a human
-  operator in-game** — not something a session can drive over SSH alone; still blocked on
-  that, not re-attempted this afternoon.
+- ~~**Hagga Basin Jasmine discovery test**~~ — **Done this afternoon**, and it corrected a
+  real environment bug in the process. See
+  [`findings/2026-08-24-hagga-live-process-and-jasmium/README.md`](../findings/2026-08-24-hagga-live-process-and-jasmium/README.md)
+  for the full account. Short version: the operator discovered `JasmiumOre`/`JasmiumPickup`
+  ("Jasmium Crystal," a real Ore-type resource, not flora) in Hagga's "Shoel" sector — the
+  first genuinely new resource type ever seen there. Scanning it live showed the census
+  finds every one of the 33 new nodes (100% within 151 m), just with more positional slop
+  than the standard 1 m threshold assumes for this type — a real, useful, positive result,
+  not the "112 total records forever" ceiling this file previously worried about. **That
+  112-record ceiling turned out to be a red herring**: it came from scanning the wrong
+  process (`Overmap`, 0 connected players) instead of the one the operator was actually on
+  (`Survival_1`) — see the Environment section below, corrected as a direct result.
 - **The `*Pickup` recall gap — re-verified this afternoon, and the earlier characterization
   in this file was misleading.** This file previously said "RhyolitePickup/AzuritePickup
   recall sat around 67% against 66-89% for ore types" and named those two as the anomaly.
@@ -140,16 +142,42 @@ way? Check `~/scan-findings/storm-watch.log` on `dune-dev` and whatever
 
 ## Environment
 
-`ssh dune-dev`, passwordless sudo. **DeepDesert = `DeepDesert_1` (PID resolved fresh each
+`ssh dune-dev`, passwordless sudo. **DeepDesert = `DeepDesert_1`** (PID resolved fresh each
 time via `ps -eo pid=,rss=,args=` matching `DeepDesert_1` and RSS > 100MB — never hardcode,
-the process respawns on every regeneration). Hagga Basin = the "Overmap" process** (matches
-`farm_state.map = 'Overmap'`, confirmed via DB tonight — not literally named `HaggaBasin` as
-a process arg). `gdb` is now installed on `dune-dev` (wasn't at session start). Cross-compile
+the process respawns on every regeneration).
+
+**Hagga Basin is NOT the "Overmap" process for live/player-populated scanning — this file
+was wrong about that until this afternoon.** `Overmap` is a real process (`farm_state.map =
+'Overmap'`) but it runs with **0 connected players** and its memory is static/geographically
+clustered, disconnected from whatever the operator is actually doing. The process real
+players are on is **`Survival_1`** — confirmed via `dune.farm_state.connected_players > 0`
+while the operator stood on a live node, and independently by scanning it (91,603
+spawn-record hits, matching DD's scale, vs. `Overmap`'s static 112). **Resolve the live
+Hagga PID by querying `farm_state` for the row with `connected_players > 0` and its
+`map` column, then matching that map name against the process's `argv[2]`** (see the safe
+extraction command below) — don't hardcode `Overmap` or any other name. See
+`findings/2026-08-24-hagga-live-process-and-jasmium/README.md` for the full story; this was
+found because the earlier `~/scan-findings/re/hagga-*-before.*` snapshots (used for the
+first, incomplete Jasmine-test attempt) were also taken against `Overmap`, so they were
+never going to show anything useful even if that test had been completed then.
+
+**Never print full `ps ... args`** (carries the live Funcom `ServiceAuthToken` — this bit a
+committed script once already this session, then an ad hoc interactive command a second
+time). Use `ps -o pid,etime,rss,comm` for a quick liveness check, and for the map-name
+argument specifically:
+
+```bash
+sudo tr '\0' '\n' < /proc/<pid>/cmdline | sed -n '3p'   # argv[2] is the map name
+```
+
+`gdb` is now installed on `dune-dev` (wasn't at session start). Cross-compile
 locally (`GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build`) and `scp` to
 `dune-dev:~/scan-findings/bin/`. `dune database sql "<query>"` is the read-only DB
 interface — for anything with special characters, write the SQL to a file and pipe it in
-(`dune database sql "$(cat file.sql)"`) rather than fighting `ssh` quoting. `dune-dev` is
-sanctioned for this work; `dune-prod` is not.
+(`dune database sql "$(cat file.sql)"`) rather than fighting `ssh` quoting; for a CSV
+export use `COPY (...) TO STDOUT WITH (FORMAT csv, HEADER true)` inside that query, not a
+`--format` flag (the CLI doesn't have one). `dune-dev` is sanctioned for this work;
+`dune-prod` is not.
 
 ## Repo state as of 2026-08-24, ~15:25 PDT (afternoon touch-up)
 
