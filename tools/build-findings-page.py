@@ -145,9 +145,17 @@ def absolutise_links(body: str) -> str:
 
 
 def chipify(body: str) -> str:
-    """Status markers encode real state -- render them as chips, not bare emoji."""
+    """Status markers encode real state -- render them as chips, not bare emoji.
+
+    The emoji glyph is kept INSIDE the chip rather than replaced by the text
+    label alone. Emoji render with zero CSS dependency in every browser; the
+    pill background/color is a progressive enhancement on top of that, not a
+    replacement for it. If styling ever fails to apply for a reader for any
+    reason, they still see the same colored glyph GitHub's own markdown
+    rendering already shows them -- never bare, unstyled text.
+    """
     for marker, (cls, label) in CHIPS.items():
-        body = body.replace(marker, f'<span class="chip {cls}">{label}</span>')
+        body = body.replace(marker, f'<span class="chip {cls}">{marker} {label}</span>')
     return body
 
 
