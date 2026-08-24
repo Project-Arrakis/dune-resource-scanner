@@ -111,11 +111,26 @@ matters more than it did, not less.
 The published page is a **self-contained** view: it carries the substance rather than
 links, so it reads standalone and does not require a reader to navigate the repo.
 
-**Live page:** <https://claude.ai/code/artifact/a71d45b1-b8a4-4aba-b33f-359a003653d2>
-**Source:** [`shared/findings-index.html`](shared/findings-index.html) — edit that file and
-re-publish it to the **same URL**; publishing a different path creates a second, competing
-page. Keep the `<title>` and favicon stable, since readers find the page by name and tab
-icon.
+**Live page:** <https://project-arrakis.github.io/dune-resource-scanner/>
+**Source:** [`docs/index.html`](../docs/index.html) — a complete standalone HTML document,
+served by **GitHub Pages** from `main` at `/docs`. Edit and push; Pages redeploys on merge.
+
+It is hosted from the repo rather than anywhere else for the obvious reason: the source and
+the published page then cannot drift, and there is no separate publish step to forget.
+
+Note that **GitHub will not render HTML from the repo or `raw.githubusercontent.com`** —
+raw serves `content-type: text/plain` with `nosniff`, deliberately, so nobody can host
+pages off raw URLs. Pages is the supported path, and it is free because this repo is
+public.
+
+`docs/.nojekyll` is present so Pages serves the directory verbatim instead of running it
+through Jekyll.
+
+A copy is also published as a Claude Artifact at
+<https://claude.ai/code/artifact/a71d45b1-b8a4-4aba-b33f-359a003653d2>. That was the
+original home, chosen when this repo was still private and Pages was therefore unavailable.
+**GitHub Pages is now canonical**; if you update one, update the other or retire the
+artifact.
 
 ### What must never be committed
 
