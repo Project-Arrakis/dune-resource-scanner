@@ -54,7 +54,10 @@ if [ -z "$PID" ]; then
   exit 1
 fi
 echo "DeepDesert_1 PID resolved: $PID"
-ps -o pid,etime,rss,args -p "$PID"
+# Redact args: the launch command line carries a live Funcom ServiceAuthToken
+# (see findings/2026-08-22-technical-findings-report.md sec 11.1) -- never
+# capture full `args` into a log that leaves this host.
+ps -o pid,etime,rss,comm -p "$PID"
 
 echo
 echo "--- capturing markers ---"
