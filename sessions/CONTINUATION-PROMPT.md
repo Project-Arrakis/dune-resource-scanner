@@ -79,7 +79,7 @@ session's tooling declined the merge action. Merge them before building on `main
 |---|---|---|
 | Spice (3 tiers), Flour Sand | `resourcefield_state` + `field_id` decode | **Ready** — exact, live, both maps |
 | Ore / stone / flora nodes | scanner + class→name | **Blocked on #16** |
-| Named POIs | `dune.markers` | **Ready**, discovery-limited |
+| Named POIs | `dune.markers` where `long_range=true` | **Ready and complete** — every POI row on both maps is `long_range` + named, revealed at range not by visiting. Scanner not needed here. Post-storm repopulation timing unobserved |
 | Bases, storage, vehicles, players | existing `liveMap*` in Core | **Already shipped** |
 | Dropped loot | `dune.actors` `BP_LootContainer` | **Ready**, unused |
 | Hagga region labels | marker `DisplayName` | **Ready** — normalise spelling |

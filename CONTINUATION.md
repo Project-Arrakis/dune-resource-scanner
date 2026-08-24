@@ -968,7 +968,7 @@ buildings, and storm/worm activity. Current source-by-source status:
 |---|---|---|
 | Spice (3 tiers), Flour Sand | `resourcefield_state` + `field_id` decode | **Ready for the inner ~87% of the map** -- exact and live, but the 21-bit packing cannot represent \|x\| or \|y\| beyond 1,048,575, where 12.9% of real DD markers sit (see section 2) |
 | Ore / stone / flora nodes | scanner + class->name | **Blocked on #16** |
-| Named POIs (cave, ecolab/testing station, shipwreck, sietch, vendor, camp, hazard) | `dune.markers` | **Ready but discovery-limited** |
+| Named POIs (cave, ecolab/testing station, shipwreck, sietch, vendor, camp, hazard) | `dune.markers` where `long_range=true` | **Ready and complete** -- every POI row on both maps is `long_range` and named, so these are revealed at range rather than by visiting (see 4c). Not discovery-limited, and the scanner is not needed for this layer. Post-storm repopulation timing is still unobserved. |
 | Player bases, storage, vehicles, players | existing `liveMap*` queries in Core | **Already shipped** |
 | Dropped loot | `dune.actors` `BP_LootContainer` + inventories | **Ready**, unused |
 | Hagga region labels | marker `DisplayName` `Survival_<Region>_` | **Ready** (normalise spelling, see 10g) |
