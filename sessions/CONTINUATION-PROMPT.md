@@ -173,7 +173,7 @@ is not.
 
 Persistent scan data lives on `dune-dev:~/scan-findings/` (not `/tmp`).
 
-Test character: FLS `BeretGenesis#24872`, name `DarkDante`.
+Test character: FLS `<fls-id>`, name `<character>`.
 
 ## Repo state as of 2026-08-24
 

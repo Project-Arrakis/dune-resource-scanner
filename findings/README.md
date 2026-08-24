@@ -10,9 +10,9 @@ months, which is the failure mode this file exists to prevent.
 - **Status legend:** ✅ established · ❌ disproved · ⚠️ partly true / bounded · ❓ open
 - **Every claim links to the evidence that supports it.** If a row has no link, it does
   not belong here yet.
-- A **shareable, sanitised** version of this index is published as a web page — see
-  [Sharing externally](#sharing-externally). This repo is private, so links below are
-  useless to anyone outside it; the published page carries the substance instead.
+- A **shareable** version of this index is published as a web page — see
+  [Sharing externally](#sharing-externally). The page carries the substance rather than
+  links, so it reads standalone.
 
 ---
 
@@ -104,35 +104,48 @@ the scan host under a persistent path, never `/tmp`.
 
 ## Sharing externally
 
-This repo is **private**, so the links above are useless to anyone without access, and the
-evidence files carry operational detail that should not leave it.
+**This repository is public.** It was private when these findings were first written, and
+that changed on 2026-08-24 — so the links above do resolve for anyone, and the rule below
+matters more than it did, not less.
 
-The shareable view is a **published web page** (an Artifact) that is self-contained —
-it carries the substance rather than links into the repo. It starts private to the
-publisher and is shared deliberately from the page's own share menu.
+The published page is a **self-contained** view: it carries the substance rather than
+links, so it reads standalone and does not require a reader to navigate the repo.
 
 **Live page:** <https://claude.ai/code/artifact/a71d45b1-b8a4-4aba-b33f-359a003653d2>
 **Source:** [`shared/findings-index.html`](shared/findings-index.html) — edit that file and
 re-publish it to the **same URL**; publishing a different path creates a second, competing
-page.
+page. Keep the `<title>` and favicon stable, since readers find the page by name and tab
+icon.
 
-**Sanitisation rules — apply before publishing, every time:**
+### What must never be committed
 
-| Never publish | Why |
+| Never commit | Why |
 |---|---|
-| Host aliases (`dune-dev`, `dune-prod`) and any `192.168.*` address | Internal topology |
-| Player FLS IDs and character names | Personal identifiers |
-| SSH commands, absolute host paths | Operational detail |
+| Player identifiers (`Name#NNNN`) and in-game character names | Personal identifiers |
+| Any RFC1918 address (`192.168.*`, `10.*`, `172.16–31.*`) | Internal topology |
+| Email addresses | Personal identifiers |
 | Database credentials or role names | Requirement 5 / 24 |
 
-**Safe to publish:** findings and conclusions, marker/record counts, coverage percentages,
-game-side type names, memory offsets and record layouts, and coordinates (game world data).
+Use placeholders instead — `<fls-id>`, `<character>`, `<dev-vm-ip>`, `<scan-host>`. **Host
+aliases are fine and should be kept**: they carry no address, and the operational docs are
+useless without them.
 
-Before publishing, run the sanitisation check:
+**Safe to publish:** findings and conclusions, marker and record counts, coverage
+percentages, game-side type names, memory offsets and record layouts, and in-game
+coordinates.
+
+### Enforcing it
 
 ```sh
-grep -nE 'dune-dev|dune-prod|192\.168\.|BeretGenesis|ssh |/home/' findings/shared/findings-index.html
+./tools/check-public-safe.sh
 ```
 
-It must return nothing. Keep the `<title>` and favicon stable across republishes — readers
-find the page by its name and tab icon.
+Run it before publishing and before any push that touches documentation. It greps tracked
+files for the patterns above and exits non-zero on a hit. The patterns are generic by
+design — hard-coding the literal values would reintroduce exactly what it exists to remove.
+
+A redaction pass ran on 2026-08-24 covering player identifiers, character names, internal
+addresses and a hostname across six files. **Redaction limits future exposure only** —
+those values remain in git history, and removing them there would require a history
+rewrite across already-merged PRs, which was judged disproportionate given that no
+credential was ever exposed (gitleaks is clean across the full history).

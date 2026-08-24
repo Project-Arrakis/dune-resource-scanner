@@ -59,7 +59,7 @@ for every claim made in §11.
    `dune-awakening-selfhost-docker` (out of scope for this report — tracked separately, see
    `CONTINUATION.md` §"Immediate next step").
 
-This report covers steps 1–2 as executed against `dune-dev` (192.168.21.10), the
+This report covers steps 1–2 as executed against `dune-dev` (<dev-vm-ip>), the
 non-production development instance of the game server stack. It does not cover the Live Map
 integration itself.
 
@@ -71,7 +71,7 @@ integration itself.
 |---|---|---|
 | Target process | `DuneSandboxServer-Linux-Shipping` (DeepDesert_1 map, PvP partition 32) | `ps aux` on `dune-dev`, this session |
 | PID at time of investigation | `3693040` | same |
-| Host | `dune-dev`, 192.168.21.10, hostname `duneawakening-2` | `ssh dune-dev "uname -a"` |
+| Host | `dune-dev`, <dev-vm-ip>, hostname `<scan-host>` | `ssh dune-dev "uname -a"` |
 | Host OS | Ubuntu 26.04 LTS, kernel `7.0.0-29-generic` | `ssh dune-dev "cat /etc/os-release"` |
 | Host RAM | 48GiB total, 24GiB available at scan time | `ssh dune-dev "free -h"` |
 | Target process heap-like footprint | ~16.7–20GB across 399–669 mapped regions | `wc -l /proc/<pid>/maps`; direct region-size sums, this session |
