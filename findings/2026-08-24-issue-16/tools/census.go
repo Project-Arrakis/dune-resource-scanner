@@ -122,7 +122,10 @@ func main() {
 					continue
 				}
 				z := math.Float64frombits(binary.LittleEndian.Uint64(b[p+16 : p+24]))
-				if math.IsNaN(z) || math.IsInf(z, 0) || math.Abs(z) > *zMax {
+				if !memscan.ValidTransform(x, y, z) {
+					continue
+				}
+				if nearOrigin(x, y) || math.Abs(z) > *zMax {
 					continue
 				}
 				raw++
@@ -181,12 +184,32 @@ func main() {
 	fmt.Printf("wrote %s\n", *out)
 }
 
+// originRadius rejects the near-origin junk that a bare `a >= 1` test lets through.
+// A live scan produced 1,709 records (2.0%) inside 1,000 uu of the world origin --
+// 567 within 100 uu, 43 at exactly (1,1,1), and 373 at (360,360,0) -- none of which
+// are real node positions.
+//
+// The test is RADIAL, not per-axis. Deep Desert crosses the origin, so a real node
+// can legitimately have one small coordinate: 98 of 9,601 real DD markers have
+// |x| or |y| below 1,000. None has BOTH below 1,000, so rejecting on distance from
+// the origin drops the junk without losing any of them. A per-axis test would have
+// discarded up to 98 real nodes.
+const originRadius = 1000.0
+
+// plausibleXY is a cheap pre-filter so the hot loop can reject most slots after
+// reading only one qword. The authoritative check is memscan.ValidTransform on the
+// full triple, which additionally rejects denormals, Inf and the exact origin --
+// dropping it here let 13,281 records through with a zero or denormal coordinate.
 func plausibleXY(v float64) bool {
 	if math.IsNaN(v) || math.IsInf(v, 0) {
 		return false
 	}
-	a := math.Abs(v)
-	return a >= 1 && a <= memscan.WorldBound
+	return math.Abs(v) <= memscan.WorldBound
+}
+
+// nearOrigin reports whether (x, y) sits inside originRadius of the world origin.
+func nearOrigin(x, y float64) bool {
+	return math.Hypot(x, y) < originRadius
 }
 
 func must(err error) {

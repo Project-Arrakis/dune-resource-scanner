@@ -252,10 +252,21 @@ re-analysis fixes that — it needs a ground-truth visit.
 
 Two genuine data-quality issues did surface, both minor and filterable:
 
-- **1,709 records (2.0%) sit within 1,000 uu of the world origin** and are junk;
-  567 are inside 100 uu, including 43 at exactly `(1,1,1)`. `census.go`'s
-  `plausibleXY` accepts any \|v\| >= 1, which is too permissive.
-- **1,051 duplicate positions** (84,733 distinct out of 85,784).
+- **1,709 records (2.0%) sat within 1,000 uu of the world origin** and were junk;
+  567 inside 100 uu, 43 at exactly `(1,1,1)`, 373 at `(360,360,0)`. **Fixed** --
+  `census.go` now applies `memscan.ValidTransform` to the full triple plus a
+  radial origin test.
+- **1,051 duplicate positions** (84,733 distinct out of 85,784), now 833.
+
+Post-fix census: **84,600 records, 0 near-origin junk, 833 duplicates, and marker
+coverage unchanged at 64.0% (6,148/9,601)** -- the filter removed junk without
+costing a single real node.
+
+**The origin test must be radial, not per-axis.** Deep Desert crosses the origin:
+**98 of 9,601 real DD markers have \|x\| or \|y\| below 1,000**, though none has
+both. A per-axis threshold -- the obvious first implementation, and one that was
+written and caught before merge -- would have silently discarded up to 98 real
+nodes.
 
 ### Ground-truth validation targets
 
