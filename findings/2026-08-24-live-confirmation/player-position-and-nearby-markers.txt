@@ -48,3 +48,24 @@ Cross-check against 08:38 marker snapshot:
 Cross-check against 11:03 zero-player census:
   nearest census record: 0.6 uu away, Z=3601 (marker Z=3614, diff 13)
   -> predicted before the marker existed. Tighter match than confirmation #1.
+
+=== Third confirmation: an island with multiple resources (unfiltered sample) ===
+
+Live player position (dune.actors, DeepDesert):
+ id  |                                    class                                     |   x    |   y    |  z
+-----+------------------------------------------------------------------------------+--------+--------+------
+ 873 | /Game/Dune/Characters/Player/BP_DunePlayerCharacter.BP_DunePlayerCharacter_C | 106519 | 621181 | 3962
+
+Five nearest markers, all within 700uu (dune.markers, area_id=67), checked against both
+the 08:38 snapshot and the 11:03 zero-player census:
+
+type                in 08:38 snapshot?    census predicted?
+FuelCellPart        no (284km away)       YES (1.0uu)
+ScrapMetalWreckage  no (285km away)       YES (1.0uu)
+BauxiteOre          no (284km away)       no (424uu)
+ScrapMetalPart      no (285km away)       YES (82.0uu)
+BauxitePickup       no (284km away)       no (107uu)
+
+All five genuinely undiscovered before this visit. 3 of 5 (60%) matched the zero-player
+census -- in line with the 60.2%/64.8% aggregate recall from the retrospective test, not
+cherry-picked. The two misses were near-misses (107uu, 424uu), not wrong-area failures.

@@ -43,6 +43,27 @@ coincidence in a dense field; a second, independent hit on a different type mean
 narrows that. This is no longer a hypothesis under test -- it is a repeated, direct
 observation.
 
+## Third confirmation: an unfiltered sample, not cherry-picked hits
+
+A cluster of five resource nodes at a single location, ~284 km from anything in the 08:38
+snapshot -- all five genuinely undiscovered before this visit. Checked all five, not just
+the ones that matched:
+
+| Type | Existed this morning? | Census predicted it? |
+|---|---|---|
+| FuelCellPart | No | **1.0 m off** |
+| ScrapMetalWreckage | No | **1.0 m off** |
+| ScrapMetalPart | No | 82 m off |
+| BauxiteOre | No | Not predicted (nearest 424 m away) |
+| BauxitePickup | No | Not predicted (nearest 107 m away) |
+
+**3 of 5 = 60%, landing almost exactly on the 60.2%/64.8% aggregate recall** already
+measured across 1,667 and 7,934 markers respectively. This is the more important result of
+the three live confirmations: the first two were individually-picked hits and could not, on
+their own, rule out lucky targeting; this one reports every node in the cluster, hits and
+misses alike, and the hit rate matches the aggregate statistic. The misses were also
+near-misses (107 m, 424 m) rather than being wrong about the area entirely.
+
 ## The actor-resolution attempt, and why it failed as expected
 
 A proximity scan (`-near=-680553,-949772 -tolerance 3000`) was run against the live
