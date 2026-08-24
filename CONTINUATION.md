@@ -997,6 +997,35 @@ measurement. **Test it by logging fully out of DD, confirming nobody is on that 
 waiting past the 300s grace period, and re-running the census.** Ten minutes, and it
 closes the last open dependency on the post-storm path.
 
+### 4e. FNamePool block format fully decoded -- complete resource taxonomy, type attribution still blocked
+
+Direct continuation of the disassembly work above, picked back up from the memory side.
+Full evidence in `findings/2026-08-24-namepool-decode/`.
+
+Searched the previously-unscanned memory (both the 2.13 GB read-only region and, extending
+the tool, the writable heap) for literal resource-name strings. A hit for
+`_Ore_Node_Component` landed inside a dense run of short packed strings -- structurally an
+FNamePool block. Calibrated the header format against ~25 entries with independently
+countable lengths: `header = (Length << 6) | ProbeHash6`, plus 1 byte of alignment padding
+after odd-length strings. **Verified by walking a live 64KB block end to end: 1,771
+consecutive entries, zero decode failures.**
+
+This hands the project the **complete resource taxonomy for free** -- every mineral's full
+`BP_<Mineral>_[Static|Pickup|Ore]_[A-D]_[Component|Spawner]_C` hierarchy, confirming names
+previously only inferred from `dune.markers` and revealing detail the marker table never
+showed (the A-D visual-variant system, `_Cliffside`/`_Sietch` placement variants,
+`RhyoliteStone` as the real internal family name).
+
+**Does not solve type attribution.** Checked both live-confirmed ground-truth records
+(StravidiumOre, TitaniumOre -- section 4d) for a direct reference into this pool: 4 and 2
+matches respectively, both within the ~2.7% chance-match baseline (1,771/65,536), none
+semantically relevant. **Refined theory**, consistent with every other finding today: these
+384-byte records are a pre-actor "spawn slot" layer with no class identity of their own -- a
+real, nameable actor likely only exists once something, plausibly proximity, promotes a
+slot. Consistent with section 5c's finding that structure geometry streams per-player;
+resource *actors* are resident, but "resident" and "already a named UObject" appear to be
+different claims.
+
 ### 5. Two real defects found and fixed en route
 
 - **#18** -- `FindNearbyXY` accepted NaN pairs: both guards were written as "skip if

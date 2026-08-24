@@ -77,8 +77,19 @@ per type — unavailable at t=0 after a storm.
 |---|---|
 | ✅ | **A real, unscanned 2.13 GB of read-only anonymous memory found** -- structurally a better candidate for type tables than anything examined so far (all prior candidates were per-instance heap data) |
 | 🔹 | One of the three previously-dead EXE pointers, disassembled: a structurally FName-suggestive pattern (cached lookup index in writable memory, sentinel check, block-masked pointer reads) |
-| ❌ | The traced call resolved to a plain `libc.so.6` function, not game-specific code -- **inconclusive, not confirmation** |
-| ⚠️ | Full resolution would need proper decompilation tooling and considerably more tracing -- stated as a real multi-hour-to-multi-day undertaking, not implied to be close |
+| ❌ | The traced call resolved to a plain `libc.so.6` function, not game-specific code -- inconclusive on its own, but the structural pattern was later confirmed correct by the entry below |
+
+### 2026-08-24 — The FNamePool block format: fully decoded and live-verified
+
+**[`2026-08-24-namepool-decode/`](2026-08-24-namepool-decode/)**
+
+| | |
+|---|---|
+| ✅ | **Cracked the header encoding**: `(Length << 6) \| ProbeHash6`, plus 1-byte alignment padding after odd-length strings. Calibrated against ~25 known-length entries, not guessed once |
+| ✅ | **Verified against 1,771 consecutive real entries, zero decode failures** -- a wrong format guess does not survive that |
+| ✅ | **Reveals the complete resource taxonomy for free**: every mineral's full `BP_<Mineral>_[Static\|Pickup\|Ore]_[A-D]_[Component\|Spawner]_C` hierarchy, confirming names this project had only inferred before |
+| ❌ | **Does not solve type attribution.** Checked both live-confirmed ground-truth records for a direct reference into this pool -- 4 and 2 matches respectively, both consistent with the ~2.7% chance-match baseline, none semantically relevant |
+| 🔹 | Refined theory, consistent with every other finding today: these records are a pre-actor "spawn slot" layer with no class identity of their own; a real, nameable actor likely only exists once something (plausibly proximity) promotes a slot |
 
 
 
