@@ -1,0 +1,42 @@
+claimed total 23413   actual 15553   ratio 1.51x
+
+=== long_range — server-independent, CHECKABLE as fact ===
+type                  claimed   actual    ratio
+EnemyCamp                 446      397    1.12x
+Cave                      116      108    1.07x
+EnemyOutpost               72       72    1.00x
+Shipwreck                  30       22    1.36x
+Ecolab                     19       20    0.95x
+EnemyLaborOutpost          14       14    1.00x
+Sietch                      8        8    1.00x
+  worst deviation in this group: 1.36x
+
+=== discovery-driven — a per-server, per-seed snapshot, NOT checkable ===
+type                  claimed   actual    ratio
+RhyoliteOre              4761      412   11.56x
+AzuriteOre               3067      237   12.94x
+RhyolitePickup           2920     1778    1.64x
+AzuritePickup            1834     1163    1.58x
+BrittleBush              1372      973    1.41x
+PrimroseField            1199      286    4.19x
+BasaltOre                1031      205    5.03x
+DolomiteRock              699      278    2.51x
+MagnetiteOre              620      184    3.37x
+BauxiteOre                556      146    3.81x
+BasaltPickup              490      204    2.40x
+DolomitePickup            340      262    1.30x
+MagnetitePickup           310      160    1.94x
+BauxitePickup             280      119    2.35x
+Hazard_Quicksand          180       70    2.57x
+TitaniumOre               178      334    0.53x
+TitaniumPickup            130      254    0.51x
+ErythriteOre               95       27    3.52x
+StravidiumOre              66      130    0.51x
+Hazard_Radiation           56        6    9.33x
+Hazard_Drumsand            40       18    2.22x
+StravidiumPickup           29      101    0.29x
+SaguaroSeed                23        2   11.50x
+JasmiumOre                 18   absent   not present here; may be undiscovered
+ErythritePickup             8        1    8.00x
+  worst deviation in this group: 12.94x
+
