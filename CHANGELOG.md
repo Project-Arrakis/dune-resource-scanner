@@ -20,3 +20,4 @@ This project has not yet cut a tagged release; entries are grouped under
   modes, JSON output.
 - CI: build/vet/test on every push and PR to `main`; org-shared
   `reusable-security-scan.yml` (gitleaks, semgrep, trivy).
+[#18]: https://github.com/Project-Arrakis/dune-resource-scanner/issues/18
