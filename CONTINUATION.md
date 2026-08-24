@@ -909,6 +909,48 @@ without entering" proves long-range reveal works without visiting the POI. It do
 quickly they repopulate after a Coriolis storm wipes them. Until that is observed
 across an actual storm, do not assume the POI layer is available at t=0 post-storm.
 
+### 4d. VALIDATED: the scanner finds undiscovered nodes -- but the instance dependency is untested
+
+Two checks, both run **without anyone actively playing**, that answer what the planned
+ground-truth teleports were meant to settle. Full evidence in
+[`findings/2026-08-24-validation/`](findings/2026-08-24-validation/).
+
+**Retrospective test (the decisive one).** DD markers grew 7,934 -> 9,601 during the
+session as the operator explored. The census is discovery-independent by construction,
+so markers found *after* it was captured are a free blind test:
+
+| Marker set | Found by the census |
+|---|---|
+| Known when the census was taken (7,934) | **5,144 = 64.8%** |
+| **Discovered AFTER the census (1,667)** | **1,004 = 60.2%** |
+
+Statistically the same. The 4.6-point gap is type mix, not a real difference. **Discovery
+is not required** -- this is the post-storm capability, demonstrated rather than assumed.
+
+**Cross-map test.** The signature was derived on DeepDesert (procedural, PID 390735) and
+applied unchanged to HaggaBasin -- a different map, **authored** terrain, in a process
+that had **restarted during the session** (PID 2772183, fresh ASLR):
+
+| Map | Resource markers found |
+|---|---|
+| DeepDesert | **6,148 / 9,561 = 64.3%** |
+| HaggaBasin | **2,926 / 4,998 = 58.5%** |
+
+Same per-type structure on both: ore/rock 68-89%, scrap/fuel/bush 51-73%, small
+`*Pickup` 15-30%, POIs 0%. Hagga-exclusive `PrimroseField` scores 72.4%. So the approach
+is **map-independent and process-independent**, and survives a restart.
+
+**The one dependency that is NOT established: zero players.** Every scan this session ran
+while `dune admin players --online` reported `DarkDante` as Online on `DeepDesert_1`
+partition 8, even when the operator was not actually playing. Since `dune-autoscaler`
+despawns a 0-player instance after 300s, no instance means nothing to scan. Section 5c
+suggests the requirement is only that an instance *exists* (resource actors were returned
+from ~27 km away with no player near), which would make "one player logged in anywhere,
+for the 17 seconds a scan takes" sufficient -- but that is an inference, not a
+measurement. **Test it by logging fully out of DD, confirming nobody is on that map,
+waiting past the 300s grace period, and re-running the census.** Ten minutes, and it
+closes the last open dependency on the post-storm path.
+
 ### 5. Two real defects found and fixed en route
 
 - **#18** -- `FindNearbyXY` accepted NaN pairs: both guards were written as "skip if

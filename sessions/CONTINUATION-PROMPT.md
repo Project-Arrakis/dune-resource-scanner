@@ -45,6 +45,15 @@ type-attribution routes are ruled out — the actor chain, all 48 record offsets
 undiscovered nodes** (median Z 18,058 vs 3,715; 5.5x the markers even in the best-explored
 cell) — do not present the census as a complete map.
 
+**Validated 2026-08-24:** the census finds **undiscovered** nodes — 60.2% of 1,667 markers
+discovered *after* the scan was captured, vs 64.8% of already-known ones. It also transfers
+across maps and process restarts (HaggaBasin 58.5% vs DeepDesert 64.3%, same per-type
+structure). **Discovery is not required.** The one untested dependency is **zero players**:
+every scan ran while a session was registered Online on `DeepDesert_1`, and the autoscaler
+despawns 0-player instances after 300s. Test that first — log fully out of DD, confirm
+nobody is on the map, wait past 300s, re-run the census. Ten minutes, closes the last open
+question on the post-storm path.
+
 1. **[#16](https://github.com/Project-Arrakis/dune-resource-scanner/issues/16) — still the
    blocker, but it is a redesign, not a bug fix.** Next steps, cheapest first:
    (a) relax the spawn-record signature (the `+8 == 0x0000000100000001` constant is
