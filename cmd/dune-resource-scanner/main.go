@@ -157,7 +157,7 @@ func parseNear(s string) (float64, float64, error) {
 // hit (candidate BaseValue field) to the owning actor's base address and
 // validates it.
 func scanSeeds(r io.ReaderAt, mem memscan.MemReader, heap []memscan.Region, pairs []seedPair, isExe, isHeap func(uint64) bool) []result {
-	var results []result
+	results := []result{}
 	for _, region := range heap {
 		buf, err := memscan.ReadRegion(r, region)
 		if err != nil {
@@ -203,12 +203,12 @@ func scanProximity(r io.ReaderAt, mem memscan.MemReader, heap []memscan.Region, 
 		}
 	}
 	if len(rootComponents) == 0 {
-		return nil
+		return []result{}
 	}
 
 	// Pass 2: find every reference to any of those RootComponent addresses
 	// in one more sweep, then validate each as a real actor.
-	var results []result
+	results := []result{}
 	for _, region := range heap {
 		buf, err := memscan.ReadRegion(r, region)
 		if err != nil {
