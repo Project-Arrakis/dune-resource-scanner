@@ -91,15 +91,15 @@ whose instance despawned silently vanishes from the map.
 ## Working practices that matter
 
 - **Operator must be stationary before any scan.** The scanner reads `-near` at launch and runs
-  2–5 minutes. Two scans were wasted when they travelled mid-scan and the empty results looked
-  like real negative findings.
+  2–5 minutes. Two scans were wasted when the operator travelled mid-scan and the empty results
+  looked like real negative findings.
 - **Match marker-centric, not actor-centric** — for each marker, ask which class sits on it.
   Nearest-marker-wins produced two confidently-wrong labels.
 - **Exclude the operator's own character and controller** — they sit at the player's position and
   match whatever marker is underfoot.
 - **Inventory diffing beats scanning for names.** Snapshot `dune.items`, gather one node, diff.
   Order by `acquisition_time`, not `actor_id` — dropped items move to a `BP_LootContainer`.
-- **Never infer item names.** Four predictions this session, four wrong. Node name, item name and
+- **Never infer item names.** Four predictions in the last session, four wrong. Node name, item name and
   display name are three independent things.
 - **Verify pasted reference material.** Third-party docs supplied at the start were right about
   some things (`field_kind_id`, `field_id` packing) and badly wrong about others (marker counts

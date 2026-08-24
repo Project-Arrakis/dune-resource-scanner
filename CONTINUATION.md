@@ -695,7 +695,7 @@ are **empty**, so that system is not live on this server, which is why the
 - **Minor:** an empty scan emits `null` rather than `[]` (Go marshalling a nil slice), which
   breaks naive downstream parsers.
 
-### 11. Revised next steps -- two tracks
+### 11. Revised next steps -- three tracks (A blocks C)
 
 #### Track A: fix the tool (blocking)
 
