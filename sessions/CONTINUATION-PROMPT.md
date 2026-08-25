@@ -3,12 +3,17 @@
 Lives at `~/projects/repos/dune-resource-scanner/sessions/CONTINUATION-PROMPT.md`.
 Paste it into a fresh session, and **overwrite it in place before that session ends**.
 
-Last rewritten: **2026-08-25, ~06:25 PDT — the storm actually fired.** It hit at 05:10 PDT
-(70 min later than the 04:00 prediction, the windowed watcher didn't care), regenerated
-**both** DeepDesert and Hagga simultaneously (not just DD, which this file's framing had
-assumed), and confirmed the project's core hypotheses live for the first time. See
-`findings/2026-08-25-storm-regeneration/README.md` for the full account — short version
-below, under "The single most important open item," which this rewrite replaces.
+Last rewritten: **2026-08-25, ~07:20 PDT, end-of-session pass.** The storm actually fired
+overnight (05:10 PDT, 70 min later than the 04:00 prediction) and regenerated **both**
+DeepDesert and Hagga simultaneously (not just DD, which this file's framing had assumed),
+confirming the project's core hypotheses live for the first time — see
+`findings/2026-08-25-storm-regeneration/README.md` and "The single most important open
+item" below. Since the storm-fired pass at ~06:25, this session also filed
+[`dune-awakening-selfhost-docker#479`](https://github.com/Project-Arrakis/dune-awakening-selfhost-docker/issues/479)
+(a design-input handoff on whether the scanner itself, not just DB data, should ever ship
+to other operators — explicitly not a decision, see the Scope note) and merged everything
+through PR #49. The "Repo state" section at the end of this file is now accurate as of
+this pass — the earlier "not yet committed" caveat it carried is resolved.
 
 **Scope note**: this prompt is R&D-only — memory scanning, position-finding, validation,
 DB-structure investigation. Building the actual live map into the game server's Web Console
@@ -205,25 +210,31 @@ export use `COPY (...) TO STDOUT WITH (FORMAT csv, HEADER true)` inside that que
 `--format` flag (the CLI doesn't have one). `dune-dev` is sanctioned for this work;
 `dune-prod` is not.
 
-## Repo state as of 2026-08-25, ~06:25 PDT (storm-night rewrite)
+## Repo state as of 2026-08-25, ~07:20 PDT (end-of-session pass)
 
-`main` green, no open PRs. Merged 2026-08-24 night: #37 (pre-storm baseline + a real
-secret-exposure fix in `post-storm-scan.sh`), #38 (four-session static/live RE closure),
-#39 (bulk-area-discovery finding). Merged 2026-08-24 afternoon: #42 (empty-scan
-`null`-vs-`[]` fix, closes #41), #43 (this file's afternoon touch-up), #45 (Hagga
+`main` green, no open PRs, `git log --oneline -1 origin/main` matches this local clone.
+Full PR sequence this session (2026-08-24 night through 2026-08-25 morning): #37
+(pre-storm baseline + a real secret-exposure fix in `post-storm-scan.sh`), #38
+(four-session static/live RE closure), #39 (bulk-area-discovery finding), #42 (empty-scan
+`null`-vs-`[]` fix, closes #41), #43 (afternoon touch-up), #45 (Hagga
 `Overmap`-vs-`Survival_1` process-identity fix + the Jasmium test, closes #44), #46
 (retracted the Jasmium-exclusivity claim after an operator correction — Primrose, not
-Jasmium, is the Hagga-exclusive resource). **Not yet committed as of this rewrite**: the
-2026-08-25 storm findings (`findings/2026-08-25-storm-regeneration/`) and this file's own
-storm-fired update — both need a branch + PR + green CI before this rewrite is actually
-"done," per this repo's own branch discipline; do that next if you're picking this up
-mid-write, or confirm it's already merged by checking `git log --oneline -5 origin/main`
-before assuming otherwise.
+Jasmium, is Hagga-exclusive), #48 (the real storm firing, closes #47), #49 (links Core
+#479, the scanner-packaging design handoff). Every PR went through its own branch,
+tracking issue, and green CI before merge, per this repo's own Requirement 21 discipline
+— none direct-to-`main`.
 
-`findings/README.md` and the root `README.md`: `findings/README.md` is current as of this
-rewrite (new storm-regeneration entry + three capability-table rows updated); the root
-`README.md` was not checked this session — verify before trusting it if it becomes
-relevant to whatever comes next.
+`findings/README.md` is current as of this session (storm-regeneration entry + updated
+capability-table rows). The root `README.md` was **not checked this session** — verify
+before trusting it if it becomes relevant. `CONTINUATION.md` (the older, root-level
+"living document" `sessions/README.md` still points to) has **not been touched since
+2026-08-24 12:47 PDT** — it predates the type-attribution closure, the storm firing, the
+Jasmium test, and the #479 handoff entirely. Flagged, not fixed, this session — it's a
+1,300-line file and a real update was judged out of scope for the specific ask that
+prompted this rewrite. A future session should either bring it current or fold its
+still-useful content (the Live Map product-ask section, the design constraints from the
+earlier 8-hats audit) into `findings/README.md`/this file and retire it, rather than
+maintain three separate "living" documents indefinitely.
 
 One more real, small thing found this afternoon and worth remembering: a direct `ps -eo
 pid=,rss=,args=` grep for the Overmap/DeepDesert PIDs (done to confirm the Hagga process was
