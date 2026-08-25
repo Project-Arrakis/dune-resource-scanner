@@ -29,8 +29,9 @@ months, which is the failure mode this file exists to prevent.
 | **Typing the nodes the census finds directly** (memory/code) | ❌ **Cannot** — four RE sessions, all closed; the two channels barely overlap, see below | [issue-16](2026-08-24-issue-16/README.md), [static-reverse-engineering](2026-08-24-static-reverse-engineering/README.md) |
 | **Typing nodes via bulk area discovery** (sidesteps the above) | 🔹 One event revealed 1,975 fully-typed nodes at once, area-wide — single observation, not yet a repeatable procedure | [bulk-area-discovery](2026-08-24-bulk-area-discovery/README.md) |
 | Spice + Flour Sand positions from the DB | ⚠️ Exact for every field observed; a **21-bit ceiling** exists but no field beyond it has ever been seen | [field-id-21bit](2026-08-24-field-id-21bit/README.md) |
-| Named POIs from the DB | 🔹 Every POI row is `long_range`; **completeness is inferred**, and post-storm timing is unobserved | `CONTINUATION.md` §4c |
-| Scanner works with **zero players online** | ✅ **Proven** — 64.0% coverage with nobody logged in, identical to the with-player run | [experiment](2026-08-24-validation/zero-player-experiment.txt) |
+| Named POIs from the DB | ✅ **Confirmed live across a real regeneration, 2026-08-25**: of 684 Hagga markers surviving the storm, every one but 22 edge cases is `long_range=true`; zero resource-type markers survived on either map | [storm-regeneration](2026-08-25-storm-regeneration/README.md) |
+| Scanner works with **zero players online** | ✅ **Proven, including across a real regeneration** — 64.0% coverage with nobody logged in pre-storm; both post-storm scans (DD 84,130 records, Hagga 91,747) also ran with zero players online | [experiment](2026-08-24-validation/zero-player-experiment.txt), [storm-regeneration](2026-08-25-storm-regeneration/README.md) |
+| Survives a **real Coriolis regeneration** | ⚠️ Markers reset as predicted (DD: 0; Hagga: 6,270→684, resource types wiped). Census record count held (±0.6%). **Recall on the new seed is untested** — no ground truth exists yet, blocked on a player exploring, not on tooling. New, unexplained finding: ~39% of DD's positions are byte-identical pre/post-storm, not reshuffled | [storm-regeneration](2026-08-25-storm-regeneration/README.md) |
 
 ### The type problem, stated precisely
 
@@ -58,6 +59,18 @@ per type — unavailable at t=0 after a storm.
 ---
 
 ## Findings
+
+### 2026-08-25 — The real storm: core hypotheses confirmed, plus a genuinely new finding
+
+**[`2026-08-25-storm-regeneration/`](2026-08-25-storm-regeneration/)**
+
+| | |
+|---|---|
+| ✅ | Storm fired at 05:10 PDT (70 min later than predicted) — the windowed watcher caught it on its 15th firing, unattended, exactly as designed. **Both maps regenerated simultaneously**, not just DeepDesert as the project's framing had assumed |
+| ✅ | DD markers reset to **zero**; Hagga collapsed 6,270→684, and **every survivor but 22 edge cases is `long_range=true`** — zero resource-type markers survived either map. First live confirmation of a previously-inferred claim |
+| ✅ | Census mechanism held structurally with zero players online: DD 84,559→84,130 records (-0.6%), Hagga 91,603→91,747 (+0.2%), both new PIDs, both unattended |
+| 🔹 | **New, unexplained**: ~39% of DD's resource-node positions are byte-identical pre- to post-storm, not reshuffled. The reshuffled 61% is ~2x as likely to carry a known marker and ~7x as likely to be Ore/Rock-typed when it does. Real, measured, repeatable against committed data — the *why* is not established, two theories floated and explicitly not extended further |
+| ❓ | Recall on the new seed — the actual "does this survive a real regeneration" question — is untested. No ground truth exists yet; blocked on a player exploring the new layout, not on tooling |
 
 ### 2026-08-24 — Discovery reveals a whole `area_id` zone at once, not one node at a time
 
