@@ -3,9 +3,12 @@
 Lives at `~/projects/repos/dune-resource-scanner/sessions/CONTINUATION-PROMPT.md`.
 Paste it into a fresh session, and **overwrite it in place before that session ends**.
 
-Last rewritten: **2026-08-24** (afternoon touch-up, same day as the "closed off type
-attribution" rewrite below — storm is still ~12h45m out at 15:17 PDT, used the wait to
-clear two of the "smaller open items" this file itself flagged as unverified).
+Last rewritten: **2026-08-25, ~06:25 PDT — the storm actually fired.** It hit at 05:10 PDT
+(70 min later than the 04:00 prediction, the windowed watcher didn't care), regenerated
+**both** DeepDesert and Hagga simultaneously (not just DD, which this file's framing had
+assumed), and confirmed the project's core hypotheses live for the first time. See
+`findings/2026-08-25-storm-regeneration/README.md` for the full account — short version
+below, under "The single most important open item," which this rewrite replaces.
 
 **Scope note**: this prompt is R&D-only — memory scanning, position-finding, validation,
 DB-structure investigation. Building the actual live map into the game server's Web Console
@@ -33,28 +36,42 @@ what's knowable and how, not shipping the map itself.
 | **Typing via bulk area discovery** | **The real path forward, found by accident tonight.** Discovery reveals an entire `area_id` zone at once (57 total on DD), not per-node — one event revealed 1,975 fully-typed nodes in a single pass. See `findings/2026-08-24-bulk-area-discovery/README.md`. Verified only partially complete per-zone (~29% of a bounding-box's census density in the one zone checked, and that's an over-estimate since the true zone shape is smaller than the box) — not proven to be 100% coverage of a zone, worth a cleaner check if this becomes load-bearing |
 | Spice by tier, Flour Sand | Exact from `resourcefield_state` + `field_id` decode — inner ~87% of the map (21-bit packing ceiling; theoretical gap, never observed to actually cause a miss) |
 | Named POIs (`Cave`, `Ecolab`, `Shipwreck`, `TaxiService`) | **Complete and confirmed globally known** from `dune.markers` where `long_range=true`, independent of any discovery — re-verified live tonight, not just inferred |
-| Zero-player operation | **Proven.** 64.0% coverage with nobody logged in, identical to a with-player scan |
+| Zero-player operation | **Proven, including across a real regeneration.** 64.0% coverage with nobody logged in pre-storm; both post-storm scans (DD 84,130 records, Hagga 91,747) also ran unattended with zero players |
 | `dune.actor_spawners`, `fgl_entities`, `actor_state` | **Checked and ruled out** as a hidden resource-type source — 74/1,181/747 rows respectively, none resource-node related. No DB analog to `resourcefield_state` exists for solid resources; this is architectural (spice fields are server-simulated abstractly, ore nodes are static level content), not a gap |
+| **Survives a real Coriolis regeneration** | **Partially confirmed 2026-08-25.** Markers reset exactly as predicted (DD: 0; Hagga: 6,270→684, every survivor but 22 edge cases `long_range=true`). Census record count held within 0.6% on both maps. **What's NOT yet confirmed: recall on the new layout** — no ground truth exists until a player explores DD's new seed. See below |
 
-## The single most important open item: does any of this survive a real regeneration?
+## The single most important open item: does recall hold up on the new seed?
 
-Everything above — the recall numbers, the census signature, the bulk-area-discovery
-mechanism, `area_id` boundaries — was measured on **one long-lived seed (`2`)**, unchanged
-since 2026-08-21. Nothing has ever been tested against a genuinely regenerated map.
+**The storm fired at 05:10 PDT, 2026-08-25** — 70 minutes later than the 04:00 prediction;
+the windowed watcher (checks every 10 min, 03:50-07:59 PDT) caught it on its 15th firing,
+unattended, exactly as designed. **Both DeepDesert and Hagga regenerated simultaneously**
+(seed `2` → `3` on both) — this file's framing had assumed only DD would move; that was
+wrong, corrected here.
 
-**A real storm is confirmed, precisely, for tonight**: decoded directly from the official
-Discord schedule's Unix timestamps (not a guess) — North America Coriolis storm **ends
-(the actual regeneration moment) at exactly 04:00:00 AM PDT, 2026-08-25**. A hardened,
-idempotent cron job is already armed on `dune-dev` (`crontab -l`): checks every 10 minutes
-from 03:50 through 07:59 PDT, fires `post-storm-scan.sh` the moment the DeepDesert seed
-changes, captures markers + a full census. A same-format pre-storm baseline is already
-captured and committed (`findings/2026-08-24-storm-watch/pre-storm-baseline/`, seed 2,
-10,488 markers, 84,559 records, 2026-08-24T19:57:10Z) specifically to diff against it.
+What's confirmed, live, for the first time (previously only measured on one long-lived
+seed since 2026-08-21): markers reset to (near-)zero on both maps: DD to literally 0,
+Hagga from 6,270+ to 684 survivors, of which every one but 22 edge cases is
+`long_range=true` — **zero resource-type markers survived either map's regeneration**.
+The census mechanism held structurally with zero players online: DD 84,559→84,130 records
+(-0.6%), Hagga 91,603→91,747 (+0.2%), both against freshly-respawned PIDs.
 
-**When this fires, that diff is the actual next task**: does census recall hold up on a
-fresh layout? Do `area_id` boundaries and the bulk-reveal mechanism still work the same
-way? Check `~/scan-findings/storm-watch.log` on `dune-dev` and whatever
-`~/scan-findings/post-storm-*/` directory appears first.
+**A genuinely new, unexplained finding turned up while checking this**: ~39% of
+DeepDesert's resource-node census positions are byte-identical pre- to post-storm, not
+reshuffled by the reseed at all. The reshuffled 61% is ~2x as likely to carry a known
+marker and ~7x as likely to be Ore/Rock-typed when it does. Real and measured (string-exact
+comparison across 84k records, not a rounding artifact); the *why* is not established —
+see `findings/2026-08-25-storm-regeneration/README.md` §2 for the two unverified theories
+floated and explicitly not extended further.
+
+**What's still genuinely open, and it's the actual point of this whole project**: does
+census *recall* — finding nodes near real markers — hold up on the new seed? This cannot
+be answered yet. **No ground truth exists**: DeepDesert has had zero players since the
+storm, so nothing has been discovered on the new layout. This is blocked on a player
+exploring, not on tooling — the census (84,130 DD records) is already captured and
+waiting. **The actual next task, the moment DD gets a player**: pull fresh DD markers,
+re-run `findings/2026-08-24-issue-16/tools/analyse_census.py` against
+`findings/2026-08-25-storm-regeneration/dd-census-poststorm.jsonl.gz`, and get the first
+true post-storm recall number.
 
 ## Smaller open items, still real
 
@@ -179,15 +196,25 @@ export use `COPY (...) TO STDOUT WITH (FORMAT csv, HEADER true)` inside that que
 `--format` flag (the CLI doesn't have one). `dune-dev` is sanctioned for this work;
 `dune-prod` is not.
 
-## Repo state as of 2026-08-24, ~15:25 PDT (afternoon touch-up)
+## Repo state as of 2026-08-25, ~06:25 PDT (storm-night rewrite)
 
-`main` green, no open PRs. Merged tonight: #37 (pre-storm baseline + a real secret-exposure
-fix in `post-storm-scan.sh`), #38 (four-session static/live RE closure), #39 (bulk-area-
-discovery finding). Merged this afternoon: #42 (empty-scan `null`-vs-`[]` fix, closes #41).
-`findings/README.md` and the root `README.md` are both current as of the original tonight
-rewrite — read `findings/README.md` first for the full, maintained index; this prompt is a
-working-session summary, that file is the source of truth. Neither needed a change for the
-PR #42 fix (it's a scanner-output-correctness bug, not a capability/finding).
+`main` green, no open PRs. Merged 2026-08-24 night: #37 (pre-storm baseline + a real
+secret-exposure fix in `post-storm-scan.sh`), #38 (four-session static/live RE closure),
+#39 (bulk-area-discovery finding). Merged 2026-08-24 afternoon: #42 (empty-scan
+`null`-vs-`[]` fix, closes #41), #43 (this file's afternoon touch-up), #45 (Hagga
+`Overmap`-vs-`Survival_1` process-identity fix + the Jasmium test, closes #44), #46
+(retracted the Jasmium-exclusivity claim after an operator correction — Primrose, not
+Jasmium, is the Hagga-exclusive resource). **Not yet committed as of this rewrite**: the
+2026-08-25 storm findings (`findings/2026-08-25-storm-regeneration/`) and this file's own
+storm-fired update — both need a branch + PR + green CI before this rewrite is actually
+"done," per this repo's own branch discipline; do that next if you're picking this up
+mid-write, or confirm it's already merged by checking `git log --oneline -5 origin/main`
+before assuming otherwise.
+
+`findings/README.md` and the root `README.md`: `findings/README.md` is current as of this
+rewrite (new storm-regeneration entry + three capability-table rows updated); the root
+`README.md` was not checked this session — verify before trusting it if it becomes
+relevant to whatever comes next.
 
 One more real, small thing found this afternoon and worth remembering: a direct `ps -eo
 pid=,rss=,args=` grep for the Overmap/DeepDesert PIDs (done to confirm the Hagga process was
