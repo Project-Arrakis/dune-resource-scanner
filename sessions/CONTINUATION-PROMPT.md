@@ -17,6 +17,15 @@ is now tracked separately as **Core issue
 — a different repo, a different session, DB-only by design, not this repo's concern. Don't
 plan Core UI/API work from here.
 
+**Also tracked separately, filed 2026-08-25**: whether *this scanner itself* (not just
+DB data) should ever ship as an operator-facing capability is a genuinely open,
+undecided question — **Core issue
+[`dune-awakening-selfhost-docker#479`](https://github.com/Project-Arrakis/dune-awakening-selfhost-docker/issues/479)**,
+a design-input handoff, not a plan. It exists because #462 explicitly deferred this exact
+question rather than answer it. Don't treat #479's filing as a decision to build this —
+it isn't one, and this repo's own job (finding out what's knowable and how) is unaffected
+either way.
+
 ---
 
 ## The goal (unchanged)
